@@ -27,7 +27,10 @@ interface GraphProps {
     height?: number | string;
 }
 
-const Graph: React.FC<GraphProps> = ({ data, width = "100%", height = "100%" }) => {
+const DEFAULT_WIDTH = 500;
+const DEFAULT_HEIGHT = 200;
+
+const Graph: React.FC<GraphProps> = ({ data, width = DEFAULT_WIDTH, height = DEFAULT_HEIGHT }) => {
     const svgRef = useRef<SVGSVGElement>(null);
 
     useEffect(() => {
@@ -44,17 +47,9 @@ const Graph: React.FC<GraphProps> = ({ data, width = "100%", height = "100%" }) 
         const links = data.links.map(d => ({ ...d }));
         const nodes = data.nodes.map(d => ({ ...d }));
 
-        // Get the container's dimensions to fill it
-        const container = svgRef.current.parentElement;
-        let w: number, h: number;
-        if (container) {
-            const rect = container.getBoundingClientRect();
-            w = rect.width;
-            h = rect.height;
-        } else {
-            w = 1000;
-            h = 400;
-        }
+        // Use fixed width/height for layout and viewBox
+        const w = typeof width === 'number' ? width : DEFAULT_WIDTH;
+        const h = typeof height === 'number' ? height : DEFAULT_HEIGHT;
 
         // Create a simulation with several forces.
         const simulation = d3.forceSimulation(nodes)
@@ -65,10 +60,11 @@ const Graph: React.FC<GraphProps> = ({ data, width = "100%", height = "100%" }) 
 
         // Create the SVG container.
         const svg = d3.select(svgRef.current)
-            .attr("width", width)
-            .attr("height", height)
+            .attr("width", w)
+            .attr("height", h)
             .attr("viewBox", [0, 0, w, h])
-            .attr("style", "max-width: 100%; height: auto;");
+            .attr("preserveAspectRatio", "xMidYMid meet")
+            .attr("style", "width:100%;height:100%;display:block;");
 
         // Add a zoom behavior
         const zoom = d3.zoom<SVGSVGElement, unknown>()
@@ -78,6 +74,9 @@ const Graph: React.FC<GraphProps> = ({ data, width = "100%", height = "100%" }) 
             });
 
         svg.call(zoom);
+
+        // Disable double-click to zoom
+        svg.on("dblclick.zoom", null);
 
         // Create a group for zooming
         const g = svg.append("g");
@@ -169,7 +168,12 @@ const Graph: React.FC<GraphProps> = ({ data, width = "100%", height = "100%" }) 
     }, [data, width, height]);
 
     return (
-        <svg ref={svgRef}></svg>
+        <svg
+            ref={svgRef}
+            width={width}
+            height={height}
+            style={{ width: "100%", height: "100%", display: "block" }}
+        ></svg>
     );
 };
 
