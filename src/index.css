@@ -10,8 +10,6 @@
 body {
   margin: 0;
   font-family: system-ui, -apple-system, sans-serif;
-  background: #f8fafc;
-  color: #1f2937;
   min-width: 320px;
   min-height: 100vh;
 }
