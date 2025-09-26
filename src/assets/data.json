@@ -1,676 +1,521 @@
-{
+﻿{
     "nodes": [
         {
-            "id": "Myriel",
-            "group": 1,
-            "label": "Myriel"
-        },
-        {
-            "id": "Napoleon",
-            "group": 1,
-            "label": "Napoleon"
-        },
-        {
-            "id": "Mlle.Baptistine",
-            "group": 1,
-            "label": "Mlle.Baptistine"
-        },
-        {
-            "id": "Mme.Magloire",
-            "group": 1,
-            "label": "Mme.Magloire"
-        },
-        {
-            "id": "CountessdeLo",
-            "group": 1,
-            "label": "CountessdeLo"
-        },
-        {
-            "id": "Geborand",
-            "group": 1,
-            "label": "Geborand"
-        },
-        {
-            "id": "Champtercier",
-            "group": 1,
-            "label": "Champtercier"
-        },
-        {
-            "id": "Cravatte",
-            "group": 1,
-            "label": "Cravatte"
-        },
-        {
-            "id": "Count",
-            "group": 1,
-            "label": "Count"
-        },
-        {
-            "id": "OldMan",
-            "group": 1,
-            "label": "OldMan"
-        },
-        {
-            "id": "Labarre",
-            "group": 2,
-            "label": "Labarre"
-        },
-        {
-            "id": "Valjean",
-            "group": 2,
-            "label": "Valjean"
-        },
-        {
-            "id": "Marguerite",
-            "group": 3,
-            "label": "Marguerite"
-        },
-        {
-            "id": "Mme.deR",
-            "group": 2,
-            "label": "Mme.deR"
-        },
-        {
-            "id": "Isabeau",
-            "group": 2,
-            "label": "Isabeau"
-        },
-        {
-            "id": "Gervais",
-            "group": 2,
-            "label": "Gervais"
-        },
-        {
-            "id": "Tholomyes",
-            "group": 3,
-            "label": "Tholomyes"
-        },
-        {
-            "id": "Listolier",
-            "group": 3,
-            "label": "Listolier"
-        },
-        {
-            "id": "Fameuil",
-            "group": 3,
-            "label": "Fameuil"
-        },
-        {
-            "id": "Blacheville",
-            "group": 3,
-            "label": "Blacheville"
-        },
-        {
-            "id": "Favourite",
-            "group": 3,
-            "label": "Favourite"
-        },
-        {
-            "id": "Dahlia",
-            "group": 3,
-            "label": "Dahlia"
-        },
-        {
-            "id": "Zephine",
-            "group": 3,
-            "label": "Zephine"
-        },
-        {
-            "id": "Fantine",
-            "group": 3,
-            "label": "Fantine"
-        },
-        {
-            "id": "Mme.Thenardier",
-            "group": 4,
-            "label": "Mme.Thenardier"
-        },
-        {
-            "id": "Thenardier",
-            "group": 4,
-            "label": "Thenardier"
-        },
-        {
-            "id": "Cosette",
-            "group": 5,
-            "label": "Cosette"
-        },
-        {
-            "id": "Javert",
-            "group": 4,
-            "label": "Javert"
-        },
-        {
-            "id": "Fauchelevent",
+            "id": "人力资源",
             "group": 0,
-            "label": "Fauchelevent"
+            "label": "人力资源"
         },
         {
-            "id": "Bamatabois",
+            "id": "财务管理",
+            "group": 0,
+            "label": "财务管理"
+        },
+        {
+            "id": "市场营销",
+            "group": 0,
+            "label": "市场营销"
+        },
+        {
+            "id": "产品研发",
+            "group": 0,
+            "label": "产品研发"
+        },
+        {
+            "id": "技术支持",
+            "group": 0,
+            "label": "技术支持"
+        },
+        {
+            "id": "人事制度",
+            "group": 1,
+            "label": "人事制度"
+        },
+        {
+            "id": "招聘流程",
+            "group": 1,
+            "label": "招聘流程"
+        },
+        {
+            "id": "绩效考核",
+            "group": 1,
+            "label": "绩效考核"
+        },
+        {
+            "id": "薪酬福利",
+            "group": 1,
+            "label": "薪酬福利"
+        },
+        {
+            "id": "培训发展",
+            "group": 1,
+            "label": "培训发展"
+        },
+        {
+            "id": "企业文化",
             "group": 2,
-            "label": "Bamatabois"
+            "label": "企业文化"
         },
         {
-            "id": "Perpetue",
+            "id": "组织架构",
+            "group": 2,
+            "label": "组织架构"
+        },
+        {
+            "id": "工作流程",
+            "group": 2,
+            "label": "工作流程"
+        },
+        {
+            "id": "沟通协作",
+            "group": 2,
+            "label": "沟通协作"
+        },
+        {
+            "id": "项目管理",
+            "group": 2,
+            "label": "项目管理"
+        },
+        {
+            "id": "OA系统",
             "group": 3,
-            "label": "Perpetue"
+            "label": "OA系统"
         },
         {
-            "id": "Simplice",
-            "group": 2,
-            "label": "Simplice"
+            "id": "ERP系统",
+            "group": 3,
+            "label": "ERP系统"
         },
         {
-            "id": "Scaufflaire",
-            "group": 2,
-            "label": "Scaufflaire"
+            "id": "CRM系统",
+            "group": 3,
+            "label": "CRM系统"
         },
         {
-            "id": "Woman1",
-            "group": 2,
-            "label": "Woman1"
+            "id": "财务软件",
+            "group": 3,
+            "label": "财务软件"
         },
         {
-            "id": "Judge",
-            "group": 2,
-            "label": "Judge"
+            "id": "办公软件",
+            "group": 3,
+            "label": "办公软件"
         },
         {
-            "id": "Champmathieu",
-            "group": 2,
-            "label": "Champmathieu"
+            "id": "新员工培训",
+            "group": 4,
+            "label": "新员工培训"
         },
         {
-            "id": "Brevet",
-            "group": 2,
-            "label": "Brevet"
+            "id": "专业技能培训",
+            "group": 4,
+            "label": "专业技能培训"
         },
         {
-            "id": "Chenildieu",
-            "group": 2,
-            "label": "Chenildieu"
+            "id": "管理培训",
+            "group": 4,
+            "label": "管理培训"
         },
         {
-            "id": "Cochepaille",
-            "group": 2,
-            "label": "Cochepaille"
+            "id": "职业发展规划",
+            "group": 4,
+            "label": "职业发展规划"
+        },
+        {
+            "id": "领导力培养",
+            "group": 4,
+            "label": "领导力培养"
+        },
+        {
+            "id": "品牌宣传",
+            "group": 5,
+            "label": "品牌宣传"
+        },
+        {
+            "id": "市场推广",
+            "group": 5,
+            "label": "市场推广"
+        },
+        {
+            "id": "公关活动",
+            "group": 5,
+            "label": "公关活动"
+        },
+        {
+            "id": "宣传资料",
+            "group": 5,
+            "label": "宣传资料"
+        },
+        {
+            "id": "数字营销",
+            "group": 5,
+            "label": "数字营销"
+        },
+        {
+            "id": "产品介绍",
+            "group": 6,
+            "label": "产品介绍"
+        },
+        {
+            "id": "服务指南",
+            "group": 6,
+            "label": "服务指南"
+        },
+        {
+            "id": "技术文档",
+            "group": 6,
+            "label": "技术文档"
+        },
+        {
+            "id": "用户手册",
+            "group": 6,
+            "label": "用户手册"
+        },
+        {
+            "id": "解决方案",
+            "group": 6,
+            "label": "解决方案"
+        },
+        {
+            "id": "IT支持",
+            "group": 7,
+            "label": "IT支持"
+        },
+        {
+            "id": "行政后勤",
+            "group": 7,
+            "label": "行政后勤"
+        },
+        {
+            "id": "安全保卫",
+            "group": 7,
+            "label": "安全保卫"
+        },
+        {
+            "id": "设施管理",
+            "group": 7,
+            "label": "设施管理"
+        },
+        {
+            "id": "采购管理",
+            "group": 7,
+            "label": "采购管理"
+        },
+        {
+            "id": "质量管理",
+            "group": 8,
+            "label": "质量管理"
+        },
+        {
+            "id": "合规审计",
+            "group": 8,
+            "label": "合规审计"
+        },
+        {
+            "id": "风险控制",
+            "group": 8,
+            "label": "风险控制"
+        },
+        {
+            "id": "内部控制",
+            "group": 8,
+            "label": "内部控制"
+        },
+        {
+            "id": "标准认证",
+            "group": 8,
+            "label": "标准认证"
         }
     ],
     "links": [
         {
-            "source": "Napoleon",
-            "target": "Myriel",
-            "value": 1
-        },
-        {
-            "source": "Mlle.Baptistine",
-            "target": "Myriel",
-            "value": 8
-        },
-        {
-            "source": "Mme.Magloire",
-            "target": "Myriel",
+            "source": "人事制度",
+            "target": "人力资源",
             "value": 10
         },
         {
-            "source": "Mme.Magloire",
-            "target": "Mlle.Baptistine",
-            "value": 6
-        },
-        {
-            "source": "CountessdeLo",
-            "target": "Myriel",
-            "value": 1
-        },
-        {
-            "source": "Geborand",
-            "target": "Myriel",
-            "value": 1
-        },
-        {
-            "source": "Champtercier",
-            "target": "Myriel",
-            "value": 1
-        },
-        {
-            "source": "Cravatte",
-            "target": "Myriel",
-            "value": 1
-        },
-        {
-            "source": "Count",
-            "target": "Myriel",
-            "value": 2
-        },
-        {
-            "source": "OldMan",
-            "target": "Myriel",
-            "value": 1
-        },
-        {
-            "source": "Valjean",
-            "target": "Labarre",
-            "value": 1
-        },
-        {
-            "source": "Valjean",
-            "target": "Mme.Magloire",
-            "value": 3
-        },
-        {
-            "source": "Valjean",
-            "target": "Mlle.Baptistine",
-            "value": 3
-        },
-        {
-            "source": "Valjean",
-            "target": "Myriel",
-            "value": 5
-        },
-        {
-            "source": "Marguerite",
-            "target": "Valjean",
-            "value": 1
-        },
-        {
-            "source": "Mme.deR",
-            "target": "Valjean",
-            "value": 1
-        },
-        {
-            "source": "Isabeau",
-            "target": "Valjean",
-            "value": 1
-        },
-        {
-            "source": "Gervais",
-            "target": "Valjean",
-            "value": 1
-        },
-        {
-            "source": "Listolier",
-            "target": "Tholomyes",
-            "value": 4
-        },
-        {
-            "source": "Fameuil",
-            "target": "Tholomyes",
-            "value": 4
-        },
-        {
-            "source": "Fameuil",
-            "target": "Listolier",
-            "value": 4
-        },
-        {
-            "source": "Blacheville",
-            "target": "Tholomyes",
-            "value": 4
-        },
-        {
-            "source": "Blacheville",
-            "target": "Listolier",
-            "value": 4
-        },
-        {
-            "source": "Blacheville",
-            "target": "Fameuil",
-            "value": 4
-        },
-        {
-            "source": "Favourite",
-            "target": "Tholomyes",
-            "value": 3
-        },
-        {
-            "source": "Favourite",
-            "target": "Listolier",
-            "value": 3
-        },
-        {
-            "source": "Favourite",
-            "target": "Fameuil",
-            "value": 3
-        },
-        {
-            "source": "Favourite",
-            "target": "Blacheville",
-            "value": 4
-        },
-        {
-            "source": "Dahlia",
-            "target": "Tholomyes",
-            "value": 3
-        },
-        {
-            "source": "Dahlia",
-            "target": "Listolier",
-            "value": 3
-        },
-        {
-            "source": "Dahlia",
-            "target": "Fameuil",
-            "value": 3
-        },
-        {
-            "source": "Dahlia",
-            "target": "Blacheville",
-            "value": 3
-        },
-        {
-            "source": "Dahlia",
-            "target": "Favourite",
-            "value": 5
-        },
-        {
-            "source": "Zephine",
-            "target": "Tholomyes",
-            "value": 3
-        },
-        {
-            "source": "Zephine",
-            "target": "Listolier",
-            "value": 3
-        },
-        {
-            "source": "Zephine",
-            "target": "Fameuil",
-            "value": 3
-        },
-        {
-            "source": "Zephine",
-            "target": "Blacheville",
-            "value": 3
-        },
-        {
-            "source": "Zephine",
-            "target": "Favourite",
-            "value": 4
-        },
-        {
-            "source": "Zephine",
-            "target": "Dahlia",
-            "value": 4
-        },
-        {
-            "source": "Fantine",
-            "target": "Tholomyes",
-            "value": 3
-        },
-        {
-            "source": "Fantine",
-            "target": "Listolier",
-            "value": 3
-        },
-        {
-            "source": "Fantine",
-            "target": "Fameuil",
-            "value": 3
-        },
-        {
-            "source": "Fantine",
-            "target": "Blacheville",
-            "value": 3
-        },
-        {
-            "source": "Fantine",
-            "target": "Favourite",
-            "value": 4
-        },
-        {
-            "source": "Fantine",
-            "target": "Dahlia",
-            "value": 4
-        },
-        {
-            "source": "Fantine",
-            "target": "Zephine",
-            "value": 4
-        },
-        {
-            "source": "Fantine",
-            "target": "Marguerite",
-            "value": 2
-        },
-        {
-            "source": "Fantine",
-            "target": "Valjean",
+            "source": "招聘流程",
+            "target": "人力资源",
             "value": 9
         },
         {
-            "source": "Mme.Thenardier",
-            "target": "Fantine",
-            "value": 2
-        },
-        {
-            "source": "Mme.Thenardier",
-            "target": "Valjean",
-            "value": 7
-        },
-        {
-            "source": "Thenardier",
-            "target": "Mme.Thenardier",
-            "value": 13
-        },
-        {
-            "source": "Thenardier",
-            "target": "Fantine",
-            "value": 1
-        },
-        {
-            "source": "Thenardier",
-            "target": "Valjean",
-            "value": 12
-        },
-        {
-            "source": "Cosette",
-            "target": "Mme.Thenardier",
-            "value": 4
-        },
-        {
-            "source": "Cosette",
-            "target": "Valjean",
-            "value": 31
-        },
-        {
-            "source": "Cosette",
-            "target": "Tholomyes",
-            "value": 1
-        },
-        {
-            "source": "Cosette",
-            "target": "Thenardier",
-            "value": 1
-        },
-        {
-            "source": "Javert",
-            "target": "Valjean",
-            "value": 17
-        },
-        {
-            "source": "Javert",
-            "target": "Fantine",
-            "value": 5
-        },
-        {
-            "source": "Javert",
-            "target": "Thenardier",
-            "value": 5
-        },
-        {
-            "source": "Javert",
-            "target": "Mme.Thenardier",
-            "value": 1
-        },
-        {
-            "source": "Javert",
-            "target": "Cosette",
-            "value": 1
-        },
-        {
-            "source": "Fauchelevent",
-            "target": "Valjean",
+            "source": "绩效考核",
+            "target": "人力资源",
             "value": 8
         },
         {
-            "source": "Fauchelevent",
-            "target": "Javert",
-            "value": 1
+            "source": "薪酬福利",
+            "target": "人力资源",
+            "value": 9
         },
         {
-            "source": "Bamatabois",
-            "target": "Fantine",
-            "value": 1
+            "source": "培训发展",
+            "target": "人力资源",
+            "value": 8
         },
         {
-            "source": "Bamatabois",
-            "target": "Javert",
-            "value": 1
+            "source": "新员工培训",
+            "target": "培训发展",
+            "value": 9
         },
         {
-            "source": "Bamatabois",
-            "target": "Valjean",
-            "value": 2
+            "source": "专业技能培训",
+            "target": "培训发展",
+            "value": 8
         },
         {
-            "source": "Perpetue",
-            "target": "Fantine",
-            "value": 1
+            "source": "管理培训",
+            "target": "培训发展",
+            "value": 7
         },
         {
-            "source": "Simplice",
-            "target": "Perpetue",
-            "value": 2
+            "source": "职业发展规划",
+            "target": "培训发展",
+            "value": 8
         },
         {
-            "source": "Simplice",
-            "target": "Valjean",
-            "value": 3
+            "source": "领导力培养",
+            "target": "管理培训",
+            "value": 9
         },
         {
-            "source": "Simplice",
-            "target": "Fantine",
-            "value": 2
+            "source": "企业文化",
+            "target": "人力资源",
+            "value": 7
         },
         {
-            "source": "Simplice",
-            "target": "Javert",
-            "value": 1
+            "source": "组织架构",
+            "target": "人力资源",
+            "value": 8
         },
         {
-            "source": "Scaufflaire",
-            "target": "Valjean",
-            "value": 1
+            "source": "工作流程",
+            "target": "组织架构",
+            "value": 8
         },
         {
-            "source": "Woman1",
-            "target": "Valjean",
-            "value": 2
+            "source": "沟通协作",
+            "target": "工作流程",
+            "value": 9
         },
         {
-            "source": "Woman1",
-            "target": "Javert",
-            "value": 1
+            "source": "项目管理",
+            "target": "工作流程",
+            "value": 8
         },
         {
-            "source": "Judge",
-            "target": "Valjean",
-            "value": 3
+            "source": "OA系统",
+            "target": "办公软件",
+            "value": 9
         },
         {
-            "source": "Judge",
-            "target": "Bamatabois",
-            "value": 2
+            "source": "ERP系统",
+            "target": "财务管理",
+            "value": 8
         },
         {
-            "source": "Champmathieu",
-            "target": "Valjean",
-            "value": 3
+            "source": "CRM系统",
+            "target": "市场营销",
+            "value": 9
         },
         {
-            "source": "Champmathieu",
-            "target": "Judge",
-            "value": 3
+            "source": "财务软件",
+            "target": "财务管理",
+            "value": 9
         },
         {
-            "source": "Champmathieu",
-            "target": "Bamatabois",
-            "value": 2
+            "source": "办公软件",
+            "target": "行政后勤",
+            "value": 7
         },
         {
-            "source": "Brevet",
-            "target": "Judge",
-            "value": 2
+            "source": "品牌宣传",
+            "target": "市场营销",
+            "value": 10
         },
         {
-            "source": "Brevet",
-            "target": "Champmathieu",
-            "value": 2
+            "source": "市场推广",
+            "target": "市场营销",
+            "value": 9
         },
         {
-            "source": "Brevet",
-            "target": "Valjean",
-            "value": 2
+            "source": "公关活动",
+            "target": "市场营销",
+            "value": 8
         },
         {
-            "source": "Brevet",
-            "target": "Bamatabois",
-            "value": 1
+            "source": "宣传资料",
+            "target": "品牌宣传",
+            "value": 9
         },
         {
-            "source": "Chenildieu",
-            "target": "Judge",
-            "value": 2
+            "source": "数字营销",
+            "target": "市场推广",
+            "value": 8
         },
         {
-            "source": "Chenildieu",
-            "target": "Champmathieu",
-            "value": 2
+            "source": "产品介绍",
+            "target": "产品研发",
+            "value": 10
         },
         {
-            "source": "Chenildieu",
-            "target": "Brevet",
-            "value": 2
+            "source": "服务指南",
+            "target": "产品研发",
+            "value": 8
         },
         {
-            "source": "Chenildieu",
-            "target": "Valjean",
-            "value": 2
+            "source": "技术文档",
+            "target": "产品研发",
+            "value": 9
         },
         {
-            "source": "Chenildieu",
-            "target": "Bamatabois",
-            "value": 1
+            "source": "用户手册",
+            "target": "产品介绍",
+            "value": 8
         },
         {
-            "source": "Cochepaille",
-            "target": "Judge",
-            "value": 2
+            "source": "解决方案",
+            "target": "产品研发",
+            "value": 9
         },
         {
-            "source": "Cochepaille",
-            "target": "Champmathieu",
-            "value": 2
+            "source": "IT支持",
+            "target": "技术支持",
+            "value": 10
         },
         {
-            "source": "Cochepaille",
-            "target": "Brevet",
-            "value": 2
+            "source": "行政后勤",
+            "target": "人力资源",
+            "value": 7
         },
         {
-            "source": "Cochepaille",
-            "target": "Chenildieu",
-            "value": 2
+            "source": "安全保卫",
+            "target": "行政后勤",
+            "value": 8
         },
         {
-            "source": "Cochepaille",
-            "target": "Valjean",
-            "value": 2
+            "source": "设施管理",
+            "target": "行政后勤",
+            "value": 8
         },
         {
-            "source": "Cochepaille",
-            "target": "Bamatabois",
-            "value": 1
+            "source": "采购管理",
+            "target": "行政后勤",
+            "value": 7
+        },
+        {
+            "source": "质量管理",
+            "target": "产品研发",
+            "value": 8
+        },
+        {
+            "source": "合规审计",
+            "target": "财务管理",
+            "value": 9
+        },
+        {
+            "source": "风险控制",
+            "target": "财务管理",
+            "value": 8
+        },
+        {
+            "source": "内部控制",
+            "target": "合规审计",
+            "value": 9
+        },
+        {
+            "source": "标准认证",
+            "target": "质量管理",
+            "value": 8
+        },
+        {
+            "source": "绩效考核",
+            "target": "职业发展规划",
+            "value": 7
+        },
+        {
+            "source": "薪酬福利",
+            "target": "绩效考核",
+            "value": 8
+        },
+        {
+            "source": "企业文化",
+            "target": "品牌宣传",
+            "value": 6
+        },
+        {
+            "source": "项目管理",
+            "target": "产品研发",
+            "value": 8
+        },
+        {
+            "source": "CRM系统",
+            "target": "数字营销",
+            "value": 7
+        },
+        {
+            "source": "ERP系统",
+            "target": "采购管理",
+            "value": 6
+        },
+        {
+            "source": "IT支持",
+            "target": "OA系统",
+            "value": 7
+        },
+        {
+            "source": "安全保卫",
+            "target": "风险控制",
+            "value": 6
+        },
+        {
+            "source": "设施管理",
+            "target": "IT支持",
+            "value": 5
+        },
+        {
+            "source": "技术文档",
+            "target": "技术支持",
+            "value": 8
+        },
+        {
+            "source": "用户手册",
+            "target": "服务指南",
+            "value": 9
+        },
+        {
+            "source": "解决方案",
+            "target": "市场推广",
+            "value": 7
+        },
+        {
+            "source": "宣传资料",
+            "target": "产品介绍",
+            "value": 8
+        },
+        {
+            "source": "数字营销",
+            "target": "品牌宣传",
+            "value": 8
+        },
+        {
+            "source": "公关活动",
+            "target": "品牌宣传",
+            "value": 9
+        },
+        {
+            "source": "管理培训",
+            "target": "领导力培养",
+            "value": 9
+        },
+        {
+            "source": "专业技能培训",
+            "target": "技术支持",
+            "value": 7
+        },
+        {
+            "source": "新员工培训",
+            "target": "企业文化",
+            "value": 8
         }
     ]
 }

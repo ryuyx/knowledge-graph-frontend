@@ -25,12 +25,13 @@ interface GraphProps {
     data: Data;
     width?: number | string;
     height?: number | string;
+    onNodeDoubleClick?: (node: Node) => void;
 }
 
 const DEFAULT_WIDTH = 500;
 const DEFAULT_HEIGHT = 200;
 
-const Graph: React.FC<GraphProps> = ({ data, width = DEFAULT_WIDTH, height = DEFAULT_HEIGHT }) => {
+const Graph: React.FC<GraphProps> = ({ data, width = DEFAULT_WIDTH, height = DEFAULT_HEIGHT, onNodeDoubleClick }) => {
     const svgRef = useRef<SVGSVGElement>(null);
     const [selectedNodeIds, setSelectedNodeIds] = useState<string[]>([]);
 
@@ -100,7 +101,7 @@ const Graph: React.FC<GraphProps> = ({ data, width = DEFAULT_WIDTH, height = DEF
             .attr("r", 15)
             .attr("fill", d => color(d.group.toString()))
             .style("cursor", "pointer")
-            .on("click", (event, d) => {
+            .on("click", (_, d) => {
                 setSelectedNodeIds(prev => {
                     if (prev.includes(d.id)) {
                         // 取消选择
@@ -110,6 +111,14 @@ const Graph: React.FC<GraphProps> = ({ data, width = DEFAULT_WIDTH, height = DEF
                         return [...prev, d.id];
                     }
                 });
+            })
+            .on("dblclick", (_, d) => {
+                if (typeof (window as any).onNodeDoubleClick === 'function') {
+                    (window as any).onNodeDoubleClick(d);
+                }
+                if (typeof onNodeDoubleClick === 'function') {
+                    onNodeDoubleClick?.(d);
+                }
             });
 
         // Add labels below nodes
@@ -190,7 +199,7 @@ const Graph: React.FC<GraphProps> = ({ data, width = DEFAULT_WIDTH, height = DEF
         if (!node || !color) return;
         node.transition().duration(300)
             .attr("fill", d => color(d.group.toString()))
-            .attr("stroke", d => selectedNodeIds.includes(d.id) ? "#4129d2" : "none")
+            .attr("stroke", d => selectedNodeIds.includes(d.id) ? 'black' : "none")
             .attr("stroke-width", d => selectedNodeIds.includes(d.id) ? 3 : 0)
             .attr("r", d => selectedNodeIds.includes(d.id) ? 18 : 15);
     }, [selectedNodeIds]);
