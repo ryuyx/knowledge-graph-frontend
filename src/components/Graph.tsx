@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import * as d3 from 'd3';
 
 interface Node {
@@ -32,6 +32,7 @@ const DEFAULT_HEIGHT = 200;
 
 const Graph: React.FC<GraphProps> = ({ data, width = DEFAULT_WIDTH, height = DEFAULT_HEIGHT }) => {
     const svgRef = useRef<SVGSVGElement>(null);
+    const [selectedNodeIds, setSelectedNodeIds] = useState<string[]>([]);
 
     useEffect(() => {
         if (!svgRef.current) return;
@@ -92,14 +93,24 @@ const Graph: React.FC<GraphProps> = ({ data, width = DEFAULT_WIDTH, height = DEF
             .attr("stroke-width", d => Math.sqrt(d.value));
 
         const node = g.append("g")
-            //   .attr("stroke", "#fff")
-            //   .attr("stroke-width", 1.5)
             .selectAll("circle")
             .data(nodes)
             .enter()
             .append("circle")
             .attr("r", 15)
-            .attr("fill", d => color(d.group.toString()));
+            .attr("fill", d => color(d.group.toString()))
+            .style("cursor", "pointer")
+            .on("click", (event, d) => {
+                setSelectedNodeIds(prev => {
+                    if (prev.includes(d.id)) {
+                        // 取消选择
+                        return prev.filter(id => id !== d.id);
+                    } else {
+                        // 多选
+                        return [...prev, d.id];
+                    }
+                });
+            });
 
         // Add labels below nodes
         const text = g.append("g")
@@ -161,11 +172,28 @@ const Graph: React.FC<GraphProps> = ({ data, width = DEFAULT_WIDTH, height = DEF
             event.subject.fy = null;
         }
 
-        // Cleanup on unmount
+        // 保存 node selection 到 ref，供后续 useEffect 使用
+        (svgRef.current as any).__nodeSelection = node;
+        (svgRef.current as any).__colorScale = color;
+
         return () => {
             simulation.stop();
         };
     }, [data, width, height]);
+
+    // 多选高亮
+    useEffect(() => {
+        const svg = svgRef.current;
+        if (!svg) return;
+        const node = (svg as any).__nodeSelection as d3.Selection<SVGCircleElement, Node, any, any>;
+        const color = (svg as any).__colorScale as d3.ScaleOrdinal<string, string>;
+        if (!node || !color) return;
+        node.transition().duration(300)
+            .attr("fill", d => color(d.group.toString()))
+            .attr("stroke", d => selectedNodeIds.includes(d.id) ? "#4129d2" : "none")
+            .attr("stroke-width", d => selectedNodeIds.includes(d.id) ? 3 : 0)
+            .attr("r", d => selectedNodeIds.includes(d.id) ? 18 : 15);
+    }, [selectedNodeIds]);
 
     return (
         <svg

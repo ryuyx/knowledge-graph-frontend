@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import Graph from '@/components/Graph'
 import data from '@/assets/data.json'
+import AudioCard from '@/components/AudioCard'
 
 function Home() {
     const [activeTab, setActiveTab] = useState('Chat')
@@ -23,17 +24,17 @@ function Home() {
     }
 
     return (
-        <div className="min-h-screen flex flex-col justify-center items-center bg-gradient-to-br from-white/70 via-pink-50/50 to-blue-50/70 gap-5">
+        <div className="min-h-screen flex flex-col justify-center items-center bg-gradient-to-br from-white/70 via-pink-50/50 to-blue-50/70 gap-5 pb-30">
             {/* Main Container */}
             <div className={`hero min-h-100 px-20 transition-all duration-500 ${started ? 'w-full' : 'max-w-6xl'}`}>
                 <div className={`hero-content flex-col lg:flex-row ${started ? 'w-full p-0 justify-center items-center' : ''}`}>
-                    <div className={`${started ? 'w-full max-w-4xl border-0 mx-auto' : 'h-96 w-150 border border-neutral/20'} rounded-2xl overflow-hidden transition-all duration-500`}
+                    <div className={`${started ? 'w-full max-w-4xl border-0 mx-auto bg-base-300/50' : 'h-96 w-150 border border-neutral/20'} rounded-2xl overflow-hidden transition-all duration-500`}
                         style={started ? { width: 1000, height: 400 } : {}}>
                         <Graph data={data} key={started ? 'started' : 'init'} width={500} height={200} />
                     </div>
                     {!started && (
                         <div>
-                            <h1 className="text-5xl font-bold">Build Your Graph!</h1>
+                            <h1 className="text-5xl font-bold">Build Your Knowledge!</h1>
                             <p className="py-6">
                                 Provident cupiditate voluptatum et in. Quaerat fugiat ut assumenda excepturi exercitationem
                                 quasi. In deleniti eaque aut repudiandae et a id nisi.
@@ -43,7 +44,6 @@ function Home() {
                     )}
                 </div>
             </div>
-            {true && (
                 <div className="rounded-lg p-5 bg-base-100 shadow">
                     {/* Tab Navigation */}
                     <div role="tablist" className="tabs tabs-box w-full">
@@ -79,67 +79,28 @@ function Home() {
                     {/* Controls */}
                     <div className="space-y-10">
                         {/* Combined row: selects + Create button + external link */}
-                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                        <div className="flex flex-col min-w-4xl sm:flex-row sm:items-center sm:justify-between gap-4">
                             <div className="flex flex-wrap gap-3 items-center">
-                                {/* Voice Engine */}
-                                <div className="flex items-center gap-2">
-                                    <select
-                                        aria-label="Voice Engine"
-                                        className="select h-10 w-44"
-                                        value={voiceType}
-                                        onChange={(e) => setVoiceType(e.target.value)}
-                                    >
-                                        <option value="Fish Audio">🐟 Fish Audio</option>
-                                        <option value="OpenAI">🤖 OpenAI</option>
-                                        <option value="ElevenLabs">🔬 ElevenLabs</option>
-                                    </select>
-                                </div>
 
-                                {/* Male Voice */}
-                                <div className="flex items-center gap-2">
-                                    <select
-                                        aria-label="Male Voice"
-                                        className="select h-10 w-44"
-                                        value={energyLevel}
-                                        onChange={(e) => setEnergyLevel(e.target.value)}
-                                    >
-                                        <option value="en-Energetic Male">⚡ Energetic</option>
-                                        <option value="en-Calm Male">😌 Calm</option>
-                                        <option value="en-Professional Male">👔 Professional</option>
-                                    </select>
-                                </div>
-
-                                {/* Female Voice */}
-                                <div className="flex items-center gap-2">
-                                    <select
-                                        aria-label="Female Voice"
-                                        className="select h-10 w-44"
-                                        value={friendliness}
-                                        onChange={(e) => setFriendliness(e.target.value)}
-                                    >
-                                        <option value="en-Friendly Women">😊 Friendly</option>
-                                        <option value="en-Professional Women">💼 Professional</option>
-                                        <option value="en-Warm Women">🤗 Warm</option>
-                                    </select>
-                                </div>
-
-                                {/* Mode */}
-                                <div className="flex items-center gap-2">
-                                    <select
-                                        aria-label="Mode"
-                                        className="select h-10 w-36"
-                                        value={autoSetting}
-                                        onChange={(e) => setAutoSetting(e.target.value)}
-                                    >
-                                        <option value="Auto">🔄 Auto</option>
-                                        <option value="Manual">✋ Manual</option>
-                                    </select>
-                                </div>
                             </div>
+
 
                             {/* Inline actions: Create button + external link */}
                             <div className="flex items-center gap-4">
                                 {/* Create Button */}
+                                <button
+                                    onClick={handleCreatePodcast}
+                                    disabled={!chat.trim()}
+                                    className="btn btn-lg font-bold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 disabled:cursor-not-allowed disabled:transform-none"
+                                >
+                                    <span className="flex items-center gap-2 text-sm">
+                                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clipRule="evenodd" />
+                                        </svg>
+                                        Struct
+                                    </span>
+                                </button>
+
                                 <button
                                     onClick={handleCreatePodcast}
                                     disabled={!chat.trim()}
@@ -157,7 +118,33 @@ function Home() {
                         </div>
                     </div>
                 </div>
-            )}
+                <section className="mt-10 text-center max-w-4xl">
+                    <h2 className="text-lg font-semibold mb-8">Share your thoughts and ideas with the world.</h2>
+                    <div className="flex flex-col gap-4 md:grid md:grid-cols-2 md:gap-4 md:max-w-6xl md:mx-auto relative">
+                        {/* Audio Cards */}
+                        <AudioCard
+                            href="/podcast/vs962a7f-9461-4875-b7c7-2f5aca66126e"
+                            title="Hacker News: Exploring Innovative Projects in Technology, Privacy, and Engineering"
+                            status="Success"
+                            date="2025/6/23"
+                            duration="9m"
+                        />
+                        <AudioCard
+                            href="/podcast/vs789e71-b192-4374-93a2-8177f457ba5c"
+                            title="Hacker News: From Mechanical Watches to Technological Innovation: Latest Developments and Challenges in Multiple Fields"
+                            status="Success"
+                            date="2025/6/23"
+                            duration="5m"
+                        />
+                        <AudioCard
+                            href="/podcast/vsbed589-6493-4ac2-8217-64d82b1ecafa"
+                            title="V2EX Hot List: Lychee Sales, Payment Methods, Operator Policies, and Car Rental Issues"
+                            status="Success"
+                            date="2025/6/22"
+                            duration="5m"
+                        />
+                    </div>
+                </section>
         </div>
     )
 }
