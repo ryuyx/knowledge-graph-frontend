@@ -38,6 +38,8 @@ const Graph: React.FC<GraphProps> = ({ data, width = DEFAULT_WIDTH, height = DEF
     const [internalSelectedNodeIds, setInternalSelectedNodeIds] = useState<string[]>([]);
     const [dragOverPosition, setDragOverPosition] = useState<{ x: number; y: number } | null>(null);
     const [ghostScreenPosition, setGhostScreenPosition] = useState<{ x: number; y: number } | null>(null);
+    // 右键选择节点
+    const [rightSelectedNode, setRightSelectedNode] = useState<Node | null>(null);
     
     // 存储仿真和节点数据的引用
     const simulationRef = useRef<d3.Simulation<Node, Link> | null>(null);
@@ -180,7 +182,6 @@ const Graph: React.FC<GraphProps> = ({ data, width = DEFAULT_WIDTH, height = DEF
             .append("circle")
             .attr("r", 15)
             .attr("fill", d => color(d.group.toString()))
-
             .style("cursor", "pointer")
             .on("click", (_, d) => {
                 setInternalSelectedNodeIds((prev: string[]) => {
@@ -192,14 +193,53 @@ const Graph: React.FC<GraphProps> = ({ data, width = DEFAULT_WIDTH, height = DEF
                         // 多选
                         newSelectedIds = [...prev, d.id];
                     }
-                    
                     // 调用回调函数，传递选中的节点对象
                     if (onNodesSelect) {
                         const selectedNodes = nodes.filter(node => newSelectedIds.includes(node.id));
                         onNodesSelect(selectedNodes);
                     }
-                    
                     return newSelectedIds;
+                });
+            })
+            .on("contextmenu", (event, d) => {
+                event.preventDefault();
+                setRightSelectedNode((prev) => {
+                    if (!prev) {
+                        // 第一次右键，选中当前节点
+                        return d;
+                    } else if (prev.id !== d.id) {
+                        // 第二次右键，添加link
+                        // 检查是否已存在该link
+                        const exists = linksDataRef.current.some(l =>
+                            (l.source === prev.id && l.target === d.id) ||
+                            (l.source === d.id && l.target === prev.id)
+                        );
+                        if (!exists) {
+                            // 添加link
+                            linksDataRef.current.push({ source: prev.id, target: d.id });
+                            // 重新渲染links（update/enter/exit）
+                            const linkGroup = g.select('g');
+                            const updatedLinks = linkGroup.selectAll("line")
+                                .data(linksDataRef.current, (l: any) =>
+                                    (typeof l.source === 'object' ? l.source.id : l.source) + '-' +
+                                    (typeof l.target === 'object' ? l.target.id : l.target)
+                                );
+                            updatedLinks.exit().remove();
+                            updatedLinks.enter()
+                                .append("line")
+                                .attr("stroke", "#999")
+                                .attr("stroke-opacity", 0.6)
+                                .attr("stroke-width", 1.5);
+                            // 更新仿真
+                            simulationRef.current?.force("link", d3.forceLink(linksDataRef.current).id((d: any) => d.id).distance(100));
+                            simulationRef.current?.alpha(0.3).restart();
+                        }
+                        // 清除右键选择
+                        return null;
+                    } else {
+                        // 再次右键同一节点，取消选择
+                        return null;
+                    }
                 });
             })
             .on("dblclick", (_, d) => {
@@ -235,11 +275,12 @@ const Graph: React.FC<GraphProps> = ({ data, width = DEFAULT_WIDTH, height = DEF
 
         // Set the position attributes of links and nodes each time the simulation ticks.
         function ticked() {
-            link
-                .attr("x1", (d: any) => d.source.x)
-                .attr("y1", (d: any) => d.source.y)
-                .attr("x2", (d: any) => d.target.x)
-                .attr("y2", (d: any) => d.target.y);
+            // 动态获取最新的 link selection
+            g.select('g').selectAll('line')
+                .attr("x1", (d: any) => (typeof d.source === 'object' ? d.source.x : nodes.find(n => n.id === d.source)?.x))
+                .attr("y1", (d: any) => (typeof d.source === 'object' ? d.source.y : nodes.find(n => n.id === d.source)?.y))
+                .attr("x2", (d: any) => (typeof d.target === 'object' ? d.target.x : nodes.find(n => n.id === d.target)?.x))
+                .attr("y2", (d: any) => (typeof d.target === 'object' ? d.target.y : nodes.find(n => n.id === d.target)?.y));
 
             // 获取当前的节点和文本选择器（可能已经更新）
             const currentNode = (svgRef.current as any).__nodeSelection || node;
@@ -310,13 +351,56 @@ const Graph: React.FC<GraphProps> = ({ data, width = DEFAULT_WIDTH, height = DEF
                         } else {
                             newSelectedIds = [...prev, d.id];
                         }
-                        
                         if (onNodesSelect) {
                             const selectedNodes = nodesDataRef.current.filter(node => newSelectedIds.includes(node.id));
                             onNodesSelect(selectedNodes);
                         }
-                        
                         return newSelectedIds;
+                    });
+                })
+                .on("contextmenu", (event, d) => {
+                    event.preventDefault();
+                    setRightSelectedNode((prev) => {
+                        if (!prev) {
+                            // 第一次右键，选中当前节点
+                            return d;
+                        } else if (prev.id !== d.id) {
+                            // 第二次右键，添加link
+                            // 检查是否已存在该link
+                            const exists = linksDataRef.current.some(l =>
+                                (l.source === prev.id && l.target === d.id) ||
+                                (l.source === d.id && l.target === prev.id)
+                            );
+                            if (!exists) {
+                                // 添加link
+                                linksDataRef.current.push({ source: prev.id, target: d.id });
+                                // 重新渲染links（update/enter/exit）
+                                const svg = svgRef.current;
+                                const g = svg ? (svg as any).__gSelection : null;
+                                if (g) {
+                                    const linkGroup = g.select('g');
+                                    const updatedLinks = linkGroup.selectAll("line")
+                                        .data(linksDataRef.current, (l: any) =>
+                                            (typeof l.source === 'object' ? l.source.id : l.source) + '-' +
+                                            (typeof l.target === 'object' ? l.target.id : l.target)
+                                        );
+                                    updatedLinks.exit().remove();
+                                    updatedLinks.enter()
+                                        .append("line")
+                                        .attr("stroke", "#999")
+                                        .attr("stroke-opacity", 0.6)
+                                        .attr("stroke-width", 1.5);
+                                }
+                                // 更新仿真
+                                simulationRef.current?.force("link", d3.forceLink(linksDataRef.current).id((d: any) => d.id).distance(100));
+                                simulationRef.current?.alpha(0.3).restart();
+                            }
+                            // 清除右键选择
+                            return null;
+                        } else {
+                            // 再次右键同一节点，取消选择
+                            return null;
+                        }
                     });
                 })
                 .on("dblclick", (_, d) => {
@@ -374,7 +458,7 @@ const Graph: React.FC<GraphProps> = ({ data, width = DEFAULT_WIDTH, height = DEF
         setInternalSelectedNodeIds(selectedNodeIds);
     }, [selectedNodeIds]);
 
-    // 多选高亮
+    // 多选高亮 + 右键虚线高亮
     useEffect(() => {
         const svg = svgRef.current;
         if (!svg) return;
@@ -383,13 +467,27 @@ const Graph: React.FC<GraphProps> = ({ data, width = DEFAULT_WIDTH, height = DEF
         if (!node || !color) return;
         node.transition().duration(300)
             .attr("fill", d => color(d.group.toString()))
-            .attr("stroke", d => internalSelectedNodeIds.includes(d.id) ? 'black' : "none")
-            .attr("stroke-width", d => internalSelectedNodeIds.includes(d.id) ? 3 : 0)
-            .attr("r", d => internalSelectedNodeIds.includes(d.id) ? 18 : 15);
-    }, [internalSelectedNodeIds]);
+            .attr("stroke", d => {
+                if (internalSelectedNodeIds.includes(d.id)) return 'black';
+                if (rightSelectedNode && rightSelectedNode.id === d.id) return '#007bff';
+                return "none";
+            })
+            .attr("stroke-width", d => {
+                if (internalSelectedNodeIds.includes(d.id)) return 3;
+                if (rightSelectedNode && rightSelectedNode.id === d.id) return 3;
+                return 0;
+            })
+            .attr("stroke-dasharray", d => (rightSelectedNode && rightSelectedNode.id === d.id) ? "6,3" : "0");
+        // 恢复多选节点的实线
+        node.filter(d => internalSelectedNodeIds.includes(d.id))
+            .attr("stroke-dasharray", "0");
+    }, [internalSelectedNodeIds, rightSelectedNode]);
 
     return (
-        <div style={{ position: "relative", width: "100%", height: "100%" }}>
+        <div
+            style={{ position: "relative", width: "100%", height: "100%" }}
+            onContextMenu={e => e.preventDefault()}
+        >
             <svg
                 ref={svgRef}
                 width={width}

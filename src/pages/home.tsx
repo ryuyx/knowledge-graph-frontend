@@ -112,7 +112,8 @@ function Home() {
                                 <span className="text-base-content/50">1. Select to ask something about it.</span><br />
                                 <span className="text-base-content/50">2. Double-click to show the details.</span><br />
                                 <span className="text-base-content/50">3. Choose to create and share a podcast.</span><br />
-                                <span className="text-base-content/50">4. Drag and drop files into the graph to add new nodes.</span>
+                                <span className="text-base-content/50">4. Right click to connect nodes.</span><br />
+                                <span className="text-base-content/50">5. Drag and drop files into the graph to add new nodes.</span>
                             </p>
                             {/* <button className="btn btn-primary" onClick={() => setStarted(true)}>Get Started</button> */}
                         </div>
