@@ -501,30 +501,6 @@ const Graph: React.FC<GraphProps> = ({ data, width = DEFAULT_WIDTH, height = DEF
                     transition: "border 0.3s ease"
                 }}
             ></svg>
-            {ghostScreenPosition && (
-                <div
-                    style={{
-                        position: "fixed",
-                        left: ghostScreenPosition.x - 15,
-                        top: ghostScreenPosition.y - 15,
-                        width: 30,
-                        height: 30,
-                        borderRadius: "50%",
-                        backgroundColor: "rgba(0, 123, 255, 0.3)",
-                        border: "2px dashed #007bff",
-                        pointerEvents: "none",
-                        zIndex: 1000,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        fontSize: "14px",
-                        color: "#007bff",
-                        fontWeight: "bold"
-                    }}
-                >
-                    +
-                </div>
-            )}
         </div>
     );
 };

@@ -10,7 +10,6 @@ function Home() {
     const [energyLevel, setEnergyLevel] = useState('en-Energetic Male')
     const [friendliness, setFriendliness] = useState('en-Friendly Women')
     const [autoSetting, setAutoSetting] = useState('Auto')
-    const [started, setStarted] = useState(false)
 
     // 节点详情弹窗相关 state
     const [nodeDetail, setNodeDetail] = useState<any | null>(null)
@@ -89,13 +88,12 @@ function Home() {
     return (
         <div className="min-h-screen flex flex-col justify-center items-center bg-gradient-to-br from-white/70 via-pink-50/50 to-blue-50/70 gap-5 pb-30">
             {/* Main Container */}
-            <div className={`hero min-h-100 px-20 transition-all duration-500 ${started ? 'w-full' : 'max-w-6xl'}`}>
-                <div className={`hero-content flex-col lg:flex-row ${started ? 'w-full p-0 justify-center items-center' : ''}`}>
-                    <div className={`${started ? 'w-full max-w-4xl border-0 mx-auto bg-base-300/50' : 'h-96 w-150 border border-neutral/20'} rounded-2xl overflow-hidden transition-all duration-500`}
-                        style={started ? { width: 1000, height: 400 } : {}}>
+            <div className="hero min-h-100 px-20 transition-all duration-500 max-w-6xl">
+                <div className="hero-content flex-col lg:flex-row">
+                    <div className="h-96 w-150 border border-neutral/20 rounded-2xl overflow-hidden transition-all duration-500">
                         <Graph 
                             data={data} 
-                            key={started ? 'started' : 'init'} 
+                            key="init" 
                             width={500} 
                             height={200} 
                             onNodeDoubleClick={handleNodeDoubleClick} 
@@ -104,20 +102,17 @@ function Home() {
                             onFileDropped={handleFileDropped}
                         />
                     </div>
-                    {!started && (
-                        <div className='pl-5'>
-                            <h1 className="text-4xl font-bold">Build Your Knowledge!</h1>
-                            <p className="py-6">
-                                Find something you're interested in and share it.<br /><br />
-                                <span className="text-base-content/50">1. Select to ask something about it.</span><br />
-                                <span className="text-base-content/50">2. Double-click to show the details.</span><br />
-                                <span className="text-base-content/50">3. Choose to create and share a podcast.</span><br />
-                                <span className="text-base-content/50">4. Right click to connect nodes.</span><br />
-                                <span className="text-base-content/50">5. Drag and drop files into the graph to add new nodes.</span>
-                            </p>
-                            {/* <button className="btn btn-primary" onClick={() => setStarted(true)}>Get Started</button> */}
-                        </div>
-                    )}
+                    <div className='pl-5'>
+                        <h1 className="text-4xl font-bold">Build Your Knowledge!</h1>
+                        <p className="py-6">
+                            Find something you're interested in and share it.<br /><br />
+                            <span className="text-base-content/50">1. Select to ask something about it.</span><br />
+                            <span className="text-base-content/50">2. Double-click to show the details.</span><br />
+                            <span className="text-base-content/50">3. Choose to create and share a podcast.</span><br />
+                            <span className="text-base-content/50">4. Right click to connect nodes.</span><br />
+                            <span className="text-base-content/50">5. Drag and drop files into the graph to add new nodes.</span>
+                        </p>
+                    </div>
                 </div>
             </div>
             <div className="rounded-lg p-5 bg-base-100 shadow">
