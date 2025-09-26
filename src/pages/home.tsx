@@ -14,6 +14,10 @@ function Home() {
 
     // 节点详情弹窗相关 state
     const [nodeDetail, setNodeDetail] = useState<any | null>(null)
+    
+    // 选中的节点状态
+    const [selectedNodes, setSelectedNodes] = useState<any[]>([])
+    const [selectedNodeIds, setSelectedNodeIds] = useState<string[]>([])
 
     // 用于 dialog 的 ref
     const nodeDetailModalRef = useRef<HTMLDialogElement | null>(null);
@@ -37,6 +41,18 @@ function Home() {
             if (nodeDetailModalRef.current) nodeDetailModalRef.current.showModal();
         }, 0);
     };
+    
+    // 处理节点选择
+    const handleNodesSelect = (nodes: any[]) => {
+        setSelectedNodes(nodes);
+        setSelectedNodeIds(nodes.map(node => node.id));
+    };
+    
+    // 移除选中的节点
+    const removeSelectedNode = (nodeId: string) => {
+        setSelectedNodes(prev => prev.filter(node => node.id !== nodeId));
+        setSelectedNodeIds(prev => prev.filter(id => id !== nodeId));
+    };
 
     return (
         <div className="min-h-screen flex flex-col justify-center items-center bg-gradient-to-br from-white/70 via-pink-50/50 to-blue-50/70 gap-5 pb-30">
@@ -45,7 +61,15 @@ function Home() {
                 <div className={`hero-content flex-col lg:flex-row ${started ? 'w-full p-0 justify-center items-center' : ''}`}>
                     <div className={`${started ? 'w-full max-w-4xl border-0 mx-auto bg-base-300/50' : 'h-96 w-150 border border-neutral/20'} rounded-2xl overflow-hidden transition-all duration-500`}
                         style={started ? { width: 1000, height: 400 } : {}}>
-                        <Graph data={data} key={started ? 'started' : 'init'} width={500} height={200} onNodeDoubleClick={handleNodeDoubleClick} />
+                        <Graph 
+                            data={data} 
+                            key={started ? 'started' : 'init'} 
+                            width={500} 
+                            height={200} 
+                            onNodeDoubleClick={handleNodeDoubleClick} 
+                            onNodesSelect={handleNodesSelect}
+                            selectedNodeIds={selectedNodeIds}
+                        />
                     </div>
                     {!started && (
                         <div className='pl-5'>
@@ -79,6 +103,38 @@ function Home() {
                 {/* Main Content Area */}
                 <div className="my-5">
                     <div className="relative group">
+                        
+                        {/* Chat Attachments/Context Bar */}
+                        <div className="mb-2 w-full">
+                            <div className="flex items-center gap-2 flex-wrap">
+                                {selectedNodes.map((node) => (
+                                    <div
+                                        key={node.id}
+                                        className="flex items-center gap-2 px-2 py-1 bg-base-200 rounded cursor-pointer text-xs shadow border border-base-300 hover:bg-base-300 transition"
+                                        tabIndex={0}
+                                        role="button"
+                                        aria-label={`Selected node: ${node.id}`}
+                                        draggable="true"
+                                    >
+                                        <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 20 20">
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                        </svg>
+                                        <span>{node.id}</span>
+                                        <button
+                                            type="button"
+                                            className="ml-1 p-0.5 rounded hover:bg-base-100 text-base-content/50 hover:text-error transition"
+                                            tabIndex={-1}
+                                            aria-label="Remove from context"
+                                            onClick={() => removeSelectedNode(node.id)}
+                                        >
+                                            <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 20 20">
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M6 6l8 8M6 14L14 6" />
+                                            </svg>
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
                         <textarea
                             value={chat}
                             onChange={(e) => setChat(e.target.value)}
@@ -87,7 +143,7 @@ function Home() {
                             className="textarea w-full px-6 py-5 rounded-xl shadow-inner relative"
                         />
                         <div className="absolute bottom-4 right-4 text-xs text-base-content/30">
-                            {chat.length}/500
+                            {chat.length}/1000
                         </div>
                     </div>
                 </div>

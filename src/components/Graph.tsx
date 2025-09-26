@@ -26,20 +26,30 @@ interface GraphProps {
     width?: number | string;
     height?: number | string;
     onNodeDoubleClick?: (node: Node) => void;
+    onNodesSelect?: (nodes: Node[]) => void;
+    selectedNodeIds?: string[];
 }
 
 const DEFAULT_WIDTH = 500;
 const DEFAULT_HEIGHT = 200;
 
-const Graph: React.FC<GraphProps> = ({ data, width = DEFAULT_WIDTH, height = DEFAULT_HEIGHT, onNodeDoubleClick }) => {
+const Graph: React.FC<GraphProps> = ({ data, width = DEFAULT_WIDTH, height = DEFAULT_HEIGHT, onNodeDoubleClick, onNodesSelect, selectedNodeIds = [] }) => {
     const svgRef = useRef<SVGSVGElement>(null);
-    const [selectedNodeIds, setSelectedNodeIds] = useState<string[]>([]);
+    const [internalSelectedNodeIds, setInternalSelectedNodeIds] = useState<string[]>([]);
 
     useEffect(() => {
         if (!svgRef.current) return;
 
         // Clear previous content
         d3.select(svgRef.current).selectAll('*').remove();
+        
+        // 重置选中状态
+        setInternalSelectedNodeIds([]);
+        
+        // 通知父组件清空选中节点
+        if (onNodesSelect) {
+            onNodesSelect([]);
+        }
 
         // Specify the color scale.
         const color = d3.scaleOrdinal(d3.schemeSet3);
@@ -102,14 +112,23 @@ const Graph: React.FC<GraphProps> = ({ data, width = DEFAULT_WIDTH, height = DEF
             .attr("fill", d => color(d.group.toString()))
             .style("cursor", "pointer")
             .on("click", (_, d) => {
-                setSelectedNodeIds(prev => {
+                setInternalSelectedNodeIds((prev: string[]) => {
+                    let newSelectedIds: string[];
                     if (prev.includes(d.id)) {
                         // 取消选择
-                        return prev.filter(id => id !== d.id);
+                        newSelectedIds = prev.filter((id: string) => id !== d.id);
                     } else {
                         // 多选
-                        return [...prev, d.id];
+                        newSelectedIds = [...prev, d.id];
                     }
+                    
+                    // 调用回调函数，传递选中的节点对象
+                    if (onNodesSelect) {
+                        const selectedNodes = nodes.filter(node => newSelectedIds.includes(node.id));
+                        onNodesSelect(selectedNodes);
+                    }
+                    
+                    return newSelectedIds;
                 });
             })
             .on("dblclick", (_, d) => {
@@ -190,6 +209,11 @@ const Graph: React.FC<GraphProps> = ({ data, width = DEFAULT_WIDTH, height = DEF
         };
     }, [data, width, height]);
 
+    // 同步外部传入的选中节点ID
+    useEffect(() => {
+        setInternalSelectedNodeIds(selectedNodeIds);
+    }, [selectedNodeIds]);
+
     // 多选高亮
     useEffect(() => {
         const svg = svgRef.current;
@@ -199,10 +223,10 @@ const Graph: React.FC<GraphProps> = ({ data, width = DEFAULT_WIDTH, height = DEF
         if (!node || !color) return;
         node.transition().duration(300)
             .attr("fill", d => color(d.group.toString()))
-            .attr("stroke", d => selectedNodeIds.includes(d.id) ? 'black' : "none")
-            .attr("stroke-width", d => selectedNodeIds.includes(d.id) ? 3 : 0)
-            .attr("r", d => selectedNodeIds.includes(d.id) ? 18 : 15);
-    }, [selectedNodeIds]);
+            .attr("stroke", d => internalSelectedNodeIds.includes(d.id) ? 'black' : "none")
+            .attr("stroke-width", d => internalSelectedNodeIds.includes(d.id) ? 3 : 0)
+            .attr("r", d => internalSelectedNodeIds.includes(d.id) ? 18 : 15);
+    }, [internalSelectedNodeIds]);
 
     return (
         <svg
