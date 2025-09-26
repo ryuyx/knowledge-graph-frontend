@@ -13,7 +13,6 @@ interface Node {
 interface Link {
     source: string | Node;
     target: string | Node;
-    value: number;
 }
 
 interface Data {
@@ -172,7 +171,7 @@ const Graph: React.FC<GraphProps> = ({ data, width = DEFAULT_WIDTH, height = DEF
             .data(links)
             .enter()
             .append("line")
-            .attr("stroke-width", d => Math.sqrt(d.value));
+            .attr("stroke-width", 1.5);
 
         const node = g.append("g")
             .selectAll("circle")

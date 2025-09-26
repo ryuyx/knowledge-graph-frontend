@@ -229,293 +229,235 @@
     "links": [
         {
             "source": "人事制度",
-            "target": "人力资源",
-            "value": 10
+            "target": "人力资源"
         },
         {
             "source": "招聘流程",
-            "target": "人力资源",
-            "value": 9
+            "target": "人力资源"
         },
         {
             "source": "绩效考核",
-            "target": "人力资源",
-            "value": 8
+            "target": "人力资源"
         },
         {
             "source": "薪酬福利",
-            "target": "人力资源",
-            "value": 9
+            "target": "人力资源"
         },
         {
             "source": "培训发展",
-            "target": "人力资源",
-            "value": 8
+            "target": "人力资源"
         },
         {
             "source": "新员工培训",
-            "target": "培训发展",
-            "value": 9
+            "target": "培训发展"
         },
         {
             "source": "专业技能培训",
-            "target": "培训发展",
-            "value": 8
+            "target": "培训发展"
         },
         {
             "source": "管理培训",
-            "target": "培训发展",
-            "value": 7
+            "target": "培训发展"
         },
         {
             "source": "职业发展规划",
-            "target": "培训发展",
-            "value": 8
+            "target": "培训发展"
         },
         {
             "source": "领导力培养",
-            "target": "管理培训",
-            "value": 9
+            "target": "管理培训"
         },
         {
             "source": "企业文化",
-            "target": "人力资源",
-            "value": 7
+            "target": "人力资源"
         },
         {
             "source": "组织架构",
-            "target": "人力资源",
-            "value": 8
+            "target": "人力资源"
         },
         {
             "source": "工作流程",
-            "target": "组织架构",
-            "value": 8
+            "target": "组织架构"
         },
         {
             "source": "沟通协作",
-            "target": "工作流程",
-            "value": 9
+            "target": "工作流程"
         },
         {
             "source": "项目管理",
-            "target": "工作流程",
-            "value": 8
+            "target": "工作流程"
         },
         {
             "source": "OA系统",
-            "target": "办公软件",
-            "value": 9
+            "target": "办公软件"
         },
         {
             "source": "ERP系统",
-            "target": "财务管理",
-            "value": 8
+            "target": "财务管理"
         },
         {
             "source": "CRM系统",
-            "target": "市场营销",
-            "value": 9
+            "target": "市场营销"
         },
         {
             "source": "财务软件",
-            "target": "财务管理",
-            "value": 9
+            "target": "财务管理"
         },
         {
             "source": "办公软件",
-            "target": "行政后勤",
-            "value": 7
+            "target": "行政后勤"
         },
         {
             "source": "品牌宣传",
-            "target": "市场营销",
-            "value": 10
+            "target": "市场营销"
         },
         {
             "source": "市场推广",
-            "target": "市场营销",
-            "value": 9
+            "target": "市场营销"
         },
         {
             "source": "公关活动",
-            "target": "市场营销",
-            "value": 8
+            "target": "市场营销"
         },
         {
             "source": "宣传资料",
-            "target": "品牌宣传",
-            "value": 9
+            "target": "品牌宣传"
         },
         {
             "source": "数字营销",
-            "target": "市场推广",
-            "value": 8
+            "target": "市场推广"
         },
         {
             "source": "产品介绍",
-            "target": "产品研发",
-            "value": 10
+            "target": "产品研发"
         },
         {
             "source": "服务指南",
-            "target": "产品研发",
-            "value": 8
+            "target": "产品研发"
         },
         {
             "source": "技术文档",
-            "target": "产品研发",
-            "value": 9
+            "target": "产品研发"
         },
         {
             "source": "用户手册",
-            "target": "产品介绍",
-            "value": 8
+            "target": "产品介绍"
         },
         {
             "source": "解决方案",
-            "target": "产品研发",
-            "value": 9
+            "target": "产品研发"
         },
         {
             "source": "IT支持",
-            "target": "技术支持",
-            "value": 10
+            "target": "技术支持"
         },
         {
             "source": "行政后勤",
-            "target": "人力资源",
-            "value": 7
+            "target": "人力资源"
         },
         {
             "source": "安全保卫",
-            "target": "行政后勤",
-            "value": 8
+            "target": "行政后勤"
         },
         {
             "source": "设施管理",
-            "target": "行政后勤",
-            "value": 8
+            "target": "行政后勤"
         },
         {
             "source": "采购管理",
-            "target": "行政后勤",
-            "value": 7
+            "target": "行政后勤"
         },
         {
             "source": "质量管理",
-            "target": "产品研发",
-            "value": 8
+            "target": "产品研发"
         },
         {
             "source": "合规审计",
-            "target": "财务管理",
-            "value": 9
+            "target": "财务管理"
         },
         {
             "source": "风险控制",
-            "target": "财务管理",
-            "value": 8
+            "target": "财务管理"
         },
         {
             "source": "内部控制",
-            "target": "合规审计",
-            "value": 9
+            "target": "合规审计"
         },
         {
             "source": "标准认证",
-            "target": "质量管理",
-            "value": 8
+            "target": "质量管理"
         },
         {
             "source": "绩效考核",
-            "target": "职业发展规划",
-            "value": 7
+            "target": "职业发展规划"
         },
         {
             "source": "薪酬福利",
-            "target": "绩效考核",
-            "value": 8
+            "target": "绩效考核"
         },
         {
             "source": "企业文化",
-            "target": "品牌宣传",
-            "value": 6
+            "target": "品牌宣传"
         },
         {
             "source": "项目管理",
-            "target": "产品研发",
-            "value": 8
+            "target": "产品研发"
         },
         {
             "source": "CRM系统",
-            "target": "数字营销",
-            "value": 7
+            "target": "数字营销"
         },
         {
             "source": "ERP系统",
-            "target": "采购管理",
-            "value": 6
+            "target": "采购管理"
         },
         {
             "source": "IT支持",
-            "target": "OA系统",
-            "value": 7
+            "target": "OA系统"
         },
         {
             "source": "安全保卫",
-            "target": "风险控制",
-            "value": 6
+            "target": "风险控制"
         },
         {
             "source": "设施管理",
-            "target": "IT支持",
-            "value": 5
+            "target": "IT支持"
         },
         {
             "source": "技术文档",
-            "target": "技术支持",
-            "value": 8
+            "target": "技术支持"
         },
         {
             "source": "用户手册",
-            "target": "服务指南",
-            "value": 9
+            "target": "服务指南"
         },
         {
             "source": "解决方案",
-            "target": "市场推广",
-            "value": 7
+            "target": "市场推广"
         },
         {
             "source": "宣传资料",
-            "target": "产品介绍",
-            "value": 8
+            "target": "产品介绍"
         },
         {
             "source": "数字营销",
-            "target": "品牌宣传",
-            "value": 8
+            "target": "品牌宣传"
         },
         {
             "source": "公关活动",
-            "target": "品牌宣传",
-            "value": 9
+            "target": "品牌宣传"
         },
         {
             "source": "管理培训",
-            "target": "领导力培养",
-            "value": 9
+            "target": "领导力培养"
         },
         {
             "source": "专业技能培训",
-            "target": "技术支持",
-            "value": 7
+            "target": "技术支持"
         },
         {
             "source": "新员工培训",
-            "target": "企业文化",
-            "value": 8
+            "target": "企业文化"
         }
     ]
 }
