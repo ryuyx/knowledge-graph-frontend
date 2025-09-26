@@ -54,6 +54,38 @@ function Home() {
         setSelectedNodeIds(prev => prev.filter(id => id !== nodeId));
     };
 
+    // 处理文件拖拽 - 现在只处理文件内容读取等逻辑
+    const handleFileDropped = (file: File, position: { x: number; y: number }) => {
+        console.log('File dropped:', file.name, 'at position:', position);
+        
+        // 如果需要读取文件内容，可以使用 FileReader
+        if (file.type.startsWith('text/')) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const content = e.target?.result as string;
+                console.log('File content:', content.substring(0, 200) + '...');
+                // 可以将内容存储起来，比如显示在详情弹窗中
+                setNodeDetail({
+                    id: file.name,
+                    group: 2,
+                    content: content,
+                    fileType: file.type,
+                    fileSize: file.size
+                });
+            };
+            reader.readAsText(file);
+        } else {
+            // 对于非文本文件，存储基本信息
+            setNodeDetail({
+                id: file.name,
+                group: 2,
+                fileType: file.type,
+                fileSize: file.size,
+                content: `文件类型: ${file.type}\n文件大小: ${(file.size / 1024).toFixed(2)} KB`
+            });
+        }
+    };
+
     return (
         <div className="min-h-screen flex flex-col justify-center items-center bg-gradient-to-br from-white/70 via-pink-50/50 to-blue-50/70 gap-5 pb-30">
             {/* Main Container */}
@@ -69,6 +101,7 @@ function Home() {
                             onNodeDoubleClick={handleNodeDoubleClick} 
                             onNodesSelect={handleNodesSelect}
                             selectedNodeIds={selectedNodeIds}
+                            onFileDropped={handleFileDropped}
                         />
                     </div>
                     {!started && (
@@ -77,7 +110,9 @@ function Home() {
                             <p className="py-6">
                                 Find something you're interested in and share it.<br /><br />
                                 <span className="text-base-content/50">1. Select to ask something about it.</span><br />
-                                <span className="text-base-content/50">2. Double-click to show the details.</span>
+                                <span className="text-base-content/50">2. Double-click to show the details.</span><br />
+                                <span className="text-base-content/50">3. Choose to create and share a podcast.</span><br />
+                                <span className="text-base-content/50">4. Drag and drop files into the graph to add new nodes.</span>
                             </p>
                             {/* <button className="btn btn-primary" onClick={() => setStarted(true)}>Get Started</button> */}
                         </div>
