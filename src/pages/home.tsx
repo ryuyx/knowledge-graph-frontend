@@ -190,33 +190,50 @@ function Home() {
 
                         {/* Inline actions: Create button + external link */}
                         <div className="flex items-center gap-4">
-                            {/* Create Button */}
-                            <button
-                                onClick={handleCreatePodcast}
-                                disabled={!chat.trim()}
-                                className="btn btn-lg font-bold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 disabled:cursor-not-allowed disabled:transform-none"
-                            >
-                                <span className="flex items-center gap-2 text-sm">
-                                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clipRule="evenodd" />
-                                    </svg>
-                                    Struct
-                                </span>
-                            </button>
+                            {activeTab === 'Chat' ? (
+                                <button
+                                    onClick={handleCreatePodcast}
+                                    disabled={!chat.trim()}
+                                    className="btn btn-lg btn-primary font-bold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 disabled:cursor-not-allowed disabled:transform-none"
+                                >
+                                    <span className="flex items-center gap-2 text-sm">
+                                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                            <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
+                                            <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
+                                        </svg>
+                                        Sent
+                                    </span>
+                                </button>
+                            ) : (
+                                <>
+                                    {/* Create Button */}
+                                    <button
+                                        onClick={handleCreatePodcast}
+                                        disabled={!chat.trim()}
+                                        className="btn btn-lg font-bold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 disabled:cursor-not-allowed disabled:transform-none"
+                                    >
+                                        <span className="flex items-center gap-2 text-sm">
+                                            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clipRule="evenodd" />
+                                            </svg>
+                                            Struct
+                                        </span>
+                                    </button>
 
-                            <button
-                                onClick={handleCreatePodcast}
-                                disabled={!chat.trim()}
-                                className="btn btn-lg btn-primary font-bold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 disabled:cursor-not-allowed disabled:transform-none"
-                            >
-                                <span className="flex items-center gap-2 text-sm">
-                                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
-                                    </svg>
-                                    Create Podcast
-                                </span>
-                            </button>
-
+                                    <button
+                                        onClick={handleCreatePodcast}
+                                        disabled={!chat.trim()}
+                                        className="btn btn-lg btn-primary font-bold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 disabled:cursor-not-allowed disabled:transform-none"
+                                    >
+                                        <span className="flex items-center gap-2 text-sm">
+                                            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
+                                            </svg>
+                                            Create Podcast
+                                        </span>
+                                    </button>
+                                </>
+                            )}
                         </div>
                     </div>
                 </div>
