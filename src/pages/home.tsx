@@ -18,6 +18,9 @@ function Home() {
     const [selectedNodes, setSelectedNodes] = useState<any[]>([])
     const [selectedNodeIds, setSelectedNodeIds] = useState<string[]>([])
 
+    // 拖拽上传状态
+    const [isDragOver, setIsDragOver] = useState(false)
+
     // 用于 dialog 的 ref
     const nodeDetailModalRef = useRef<HTMLDialogElement | null>(null);
 
@@ -85,6 +88,36 @@ function Home() {
         }
     };
 
+    // 拖拽事件处理
+    const handleDragEnter = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragOver(true);
+    };
+
+    const handleDragLeave = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragOver(false);
+    };
+
+    const handleDragOver = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+    };
+
+    const handleDrop = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragOver(false);
+
+        const files = e.dataTransfer.files;
+        if (files && files.length > 0) {
+            const file = files[0];
+            handleFileDropped(file, { x: 0, y: 0 });
+        }
+    };
+
     return (
         <div className="min-h-screen flex flex-col justify-center items-center bg-gradient-to-br from-white/70 via-pink-50/50 to-blue-50/70 gap-5 pb-30">
             {/* Main Container */}
@@ -134,7 +167,6 @@ function Home() {
                 {/* Main Content Area */}
                 <div className="my-5">
                     <div className="relative group">
-                        
                         {/* Chat Attachments/Context Bar */}
                         <div className="mb-2 w-full">
                             <div className="flex items-center gap-2 flex-wrap">
@@ -166,16 +198,68 @@ function Home() {
                                 ))}
                             </div>
                         </div>
-                        <textarea
-                            value={chat}
-                            onChange={(e) => setChat(e.target.value)}
-                            placeholder="Enter your chat message..."
-                            rows={4}
-                            className="textarea w-full px-6 py-5 rounded-xl shadow-inner relative"
-                        />
-                        <div className="absolute bottom-4 right-4 text-xs text-base-content/30">
-                            {chat.length}/1000
-                        </div>
+                        {activeTab === 'Upload File' ? (
+                            <div 
+                                className={`flex flex-col items-center justify-center w-full py-8 border-2 border-dashed rounded-xl transition-all duration-200 ${
+                                    isDragOver 
+                                        ? 'border-primary bg-primary/10 scale-[1.02]' 
+                                        : 'border-base-300 hover:border-primary/50 hover:bg-base-50'
+                                }`}
+                                onDragEnter={handleDragEnter}
+                                onDragLeave={handleDragLeave}
+                                onDragOver={handleDragOver}
+                                onDrop={handleDrop}
+                            >
+                                {isDragOver ? (
+                                    <>
+                                        <svg className="w-16 h-16 text-primary mb-4 animate-bounce" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                                        </svg>
+                                        <div className="text-lg font-semibold text-primary mb-2">松开鼠标上传文件</div>
+                                        <div className="text-sm text-base-content/70">支持拖拽或点击上传文件</div>
+                                    </>
+                                ) : (
+                                    <>
+                                        <label htmlFor="file-upload" className="btn btn-primary mb-4 cursor-pointer">
+                                            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2" />
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M7 10l5 5 5-5" />
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 15V3" />
+                                            </svg>
+                                            选择文件上传
+                                        </label>
+                                        <input
+                                            id="file-upload"
+                                            type="file"
+                                            className="file-input file-input-bordered w-full max-w-xs mb-4"
+                                            onChange={e => {
+                                                const file = e.target.files?.[0];
+                                                if (file) {
+                                                    handleFileDropped(file, { x: 0, y: 0 });
+                                                }
+                                            }}
+                                        />
+                                        <div className="text-center">
+                                            <div className="text-base-content/70 mb-1">或者将文件拖拽到此处</div>
+                                            <div className="text-xs text-base-content/50">支持所有文件类型</div>
+                                        </div>
+                                    </>
+                                )}
+                            </div>
+                        ) : (
+                            <>
+                                <textarea
+                                    value={chat}
+                                    onChange={(e) => setChat(e.target.value)}
+                                    placeholder="Enter your chat message..."
+                                    rows={4}
+                                    className="textarea w-full px-6 py-5 rounded-xl shadow-inner relative"
+                                />
+                                <div className="absolute bottom-4 right-4 text-xs text-base-content/30">
+                                    {chat.length}/1000
+                                </div>
+                            </>
+                        )}
                     </div>
                 </div>
 
