@@ -17,7 +17,7 @@ export interface GraphData {
 }
 
 export const getKnowledgeGraph  = async (): Promise<GraphData> => {
-    const response = await apiClient.post('/knowledge/cluster');
+    const response = await apiClient.get('/knowledge/cluster');
     const data = response.data;
 
     const nodes: Node[] = [];
@@ -25,22 +25,25 @@ export const getKnowledgeGraph  = async (): Promise<GraphData> => {
     const nodeMap = new Map<string, Node>();
 
     // Add category nodes
-    Object.keys(data.big_hot_word_wtih_hot_words).forEach(key => {
-        const node: Node = { name: key, type: 'category' };
+    data.big_hot_words_with_hot_words.forEach((category: any) => {
+        const categoryName = category.word;
+        const node: Node = { name: categoryName, type: 'category' };
         nodes.push(node);
-        nodeMap.set(key, node);
+        nodeMap.set(categoryName, node);
     });
 
     // Add topic nodes and links from category to topic
-    Object.entries(data.big_hot_word_wtih_hot_words).forEach(([category, topics]: [string, any]) => {
-        topics.forEach((topic: string) => {
+    data.big_hot_words_with_hot_words.forEach((category: any) => {
+        const categoryName = category.word;
+        category.hot_words.forEach((hotWord: any) => {
+            const topic = hotWord.word;
             if (!nodeMap.has(topic)) {
                 const node: Node = { name: topic, type: 'topic' };
                 nodes.push(node);
                 nodeMap.set(topic, node);
             }
             links.push({
-                source: category,
+                source: categoryName,
                 target: topic,
                 weight: 1
             });

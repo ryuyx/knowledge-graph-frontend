@@ -1,7 +1,23 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import Graph from '@/components/Graph'
-import data from '@/assets/data.json'
+import { getKnowledgeGraph, type GraphData as ApiGraphData } from '@/api/graph'
 import AudioCard from '@/components/AudioCard'
+
+interface Data {
+    nodes: {
+        id: string;
+        group: number;
+        x?: number;
+        y?: number;
+        fx?: number | null;
+        fy?: number | null;
+    }[];
+    links: {
+        source: string | any;
+        target: string | any;
+        weight?: number;
+    }[];
+}
 
 function Home() {
     const [activeTab, setActiveTab] = useState('Chat')
@@ -17,6 +33,9 @@ function Home() {
     // 选中的节点状态
     const [selectedNodes, setSelectedNodes] = useState<any[]>([])
     const [selectedNodeIds, setSelectedNodeIds] = useState<string[]>([])
+
+    // 图数据状态
+    const [graphData, setGraphData] = useState<Data | null>(null)
 
     // 拖拽上传状态
     const [isDragOver, setIsDragOver] = useState(false)
@@ -55,6 +74,28 @@ function Home() {
         setSelectedNodes(prev => prev.filter(node => node.id !== nodeId));
         setSelectedNodeIds(prev => prev.filter(id => id !== nodeId));
     };
+
+    // 获取图数据
+    useEffect(() => {
+        const fetchGraphData = async () => {
+            try {
+                const data = await getKnowledgeGraph();
+                // 转换数据格式以匹配Graph组件
+                const convertedData = {
+                    nodes: data.nodes.map(node => ({
+                        id: node.name,
+                        group: node.type === 'category' ? 1 : 2,
+                        ...node
+                    })),
+                    links: data.links
+                };
+                setGraphData(convertedData);
+            } catch (error) {
+                console.error('Failed to fetch graph data:', error);
+            }
+        };
+        fetchGraphData();
+    }, []);
 
     // 处理文件拖拽 - 现在只处理文件内容读取等逻辑
     const handleFileDropped = (file: File, position: { x: number; y: number }) => {
@@ -125,7 +166,7 @@ function Home() {
                 <div className="hero-content flex-col lg:flex-row">
                     <div className="h-96 w-150 border border-neutral/20 rounded-2xl overflow-hidden transition-all duration-500">
                         <Graph 
-                            data={data} 
+                            data={graphData || { nodes: [], links: [] }} 
                             key="init" 
                             width={500} 
                             height={200} 
