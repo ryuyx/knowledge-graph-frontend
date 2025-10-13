@@ -12,6 +12,15 @@ export default defineConfig({
 		}
 	},
   server: {
-    host: true
+    host: true,
+    proxy: {
+      '/api': {
+        target: 'http://10.191.19.213:8000',
+        changeOrigin: true,
+        secure: false,
+        ws: true,
+        rewrite: (path) => path.replace(/^\/api/, '')
+      }
+    }
   }
 })
