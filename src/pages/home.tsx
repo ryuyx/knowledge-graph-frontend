@@ -7,6 +7,7 @@ import { chat } from '@/api/chat'
 interface Data {
     nodes: {
         id: string;
+        name: string;
         group: number;
         x?: number;
         y?: number;
@@ -41,6 +42,8 @@ function Home() {
 
     // 图数据状态
     const [graphData, setGraphData] = useState<Data | null>(null)
+    // Graph组件ref
+    const graphRef = useRef<any>(null);
 
     // 拖拽上传状态
     const [isDragOver, setIsDragOver] = useState(false)
@@ -77,8 +80,13 @@ function Home() {
             await chat(currentInput, (data: any) => {
                 if (data.event === 'RunContent') {
                     setResponse(prev => prev + data.content);
-                }else if (data.event === 'RunReferences') {
-                    //todo:make references highlight
+                } else if (data.event === 'RunReferences') {
+                    if (Array.isArray(data.references)) {
+                        const highlightIds = data.references.map((item: any) => item.meta_data?.knowledge_item_id).filter(Boolean);
+                        if (graphRef.current && typeof graphRef.current.setNodesHighlighted === 'function') {
+                            graphRef.current.setNodesHighlighted(highlightIds, true);
+                        }
+                    }
                 }
             });
         } catch (error) {
@@ -116,8 +124,7 @@ function Home() {
                 // 转换数据格式以匹配Graph组件
                 const convertedData = {
                     nodes: data.nodes.map(node => ({
-                        id: node.name,
-                            group: node.type === 'category' ? 1
+                        group: node.type === 'category' ? 1
                                 : node.type === 'topic' ? 2
                                 : node.type === 'FILE' ? 3
                                 : node.type === 'LINK' ? 4
@@ -203,6 +210,7 @@ function Home() {
                 <div className="hero-content flex-col lg:flex-row">
                     <div className="h-96 w-150 border border-neutral/20 rounded-2xl overflow-hidden transition-all duration-500">
                         <Graph 
+                            ref={graphRef}
                             data={graphData || { nodes: [], links: [] }} 
                             key="init" 
                             width={500} 

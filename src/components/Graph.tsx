@@ -1,13 +1,15 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, forwardRef, useImperativeHandle } from 'react';
 import * as d3 from 'd3';
 
 interface Node {
     id: string;
+    name: string;
     group: number;
     x?: number;
     y?: number;
     fx?: number | null;
     fy?: number | null;
+    highlighted?: boolean;
 }
 
 interface Link {
@@ -33,12 +35,12 @@ interface GraphProps {
 const DEFAULT_WIDTH = 500;
 const DEFAULT_HEIGHT = 200;
 
-const Graph: React.FC<GraphProps> = ({ data, width = DEFAULT_WIDTH, height = DEFAULT_HEIGHT, onNodeDoubleClick, onNodesSelect, selectedNodeIds = [], onFileDropped }) => {
+const Graph = forwardRef<any, GraphProps>(({ data, width = DEFAULT_WIDTH, height = DEFAULT_HEIGHT, onNodeDoubleClick, onNodesSelect, selectedNodeIds = [], onFileDropped }, ref) => {
     const svgRef = useRef<SVGSVGElement>(null);
     const [internalSelectedNodeIds, setInternalSelectedNodeIds] = useState<string[]>([]);
     const [dragOverPosition, setDragOverPosition] = useState<{ x: number; y: number } | null>(null);
     const [rightSelectedNode, setRightSelectedNode] = useState<Node | null>(null);
-    
+    const [highlightedNodeIds, setHighlightedNodeIds] = useState<string[]>([]);
     const simulationRef = useRef<d3.Simulation<Node, Link> | null>(null);
     const nodesDataRef = useRef<Node[]>([]);
     const linksDataRef = useRef<Link[]>([]);
@@ -109,6 +111,30 @@ const Graph: React.FC<GraphProps> = ({ data, width = DEFAULT_WIDTH, height = DEF
         onNodeDoubleClick?.(d);
     };
 
+    // 批量设置节点高亮状态
+    const setNodesHighlighted = (ids: string[], highlighted: boolean) => {
+        nodesDataRef.current.forEach(node => {
+            if (ids.includes(node.id)) {
+                node.highlighted = highlighted;
+            }
+        });
+        setHighlightedNodeIds(ids);
+        // 触发d3样式更新
+        const svg = svgRef.current;
+        if (!svg) return;
+        const nodeSel = (svg as any).__nodeSelection as d3.Selection<SVGCircleElement, Node, any, any>;
+        if (!nodeSel) return;
+        nodeSel.transition().duration(300)
+            .attr("stroke", d => d.highlighted ? "#ff9800" : (internalSelectedNodeIds.includes(d.id) ? "black" : (rightSelectedNode && rightSelectedNode.id === d.id ? "#007bff" : "none")))
+            .attr("stroke-width", d => d.highlighted ? 5 : (internalSelectedNodeIds.includes(d.id) ? 3 : (rightSelectedNode && rightSelectedNode.id === d.id ? 3 : 0)))
+            .attr("stroke-dasharray", d => d.highlighted ? "2,2" : (rightSelectedNode && rightSelectedNode.id === d.id ? "6,3" : "0"));
+    };
+
+    // 用useImperativeHandle暴露方法给父组件
+    useImperativeHandle(ref, () => ({
+        setNodesHighlighted
+    }));
+
     useEffect(() => {
         if (!svgRef.current) return;
 
@@ -171,7 +197,8 @@ const Graph: React.FC<GraphProps> = ({ data, width = DEFAULT_WIDTH, height = DEF
                     const [x, y] = d3.pointer(event, g.node());
                     const file = files[0];
                     const newNode: Node = {
-                        id: file.name,
+                        id: file.name + '-' + Date.now(),
+                        name: file.name,
                         group: 2,
                         x: x,
                         y: y
@@ -214,7 +241,7 @@ const Graph: React.FC<GraphProps> = ({ data, width = DEFAULT_WIDTH, height = DEF
             .append("text")
             .attr("x", (d: any) => d.x)
             .attr("y", (d: any) => d.y + 50)
-            .text((d: any) => d.id)
+            .text((d: any) => d.name || d.id)
             .attr("text-anchor", "middle")
             .attr("font-size", "12px")
             .attr("fill", "gray");
@@ -300,7 +327,7 @@ const Graph: React.FC<GraphProps> = ({ data, width = DEFAULT_WIDTH, height = DEF
                 .append("text")
                 .attr("x", (d: any) => d.x || 0)
                 .attr("y", (d: any) => d.y ? d.y + 25 : 25)
-                .text((d: any) => d.id)
+                .text((d: any) => d.name || d.id)
                 .attr("text-anchor", "middle")
                 .attr("font-size", "12px")
                 .attr("fill", "gray");
@@ -326,21 +353,25 @@ const Graph: React.FC<GraphProps> = ({ data, width = DEFAULT_WIDTH, height = DEF
         const node = (svg as any).__nodeSelection as d3.Selection<SVGCircleElement, Node, any, any>;
         const color = (svg as any).__colorScale as d3.ScaleOrdinal<string, string>;
         if (!node || !color) return;
-        
         node.transition().duration(300)
             .attr("fill", d => color(d.group.toString()))
             .attr("stroke", d => {
+                if (d.highlighted) return "#ff9800";
                 if (internalSelectedNodeIds.includes(d.id)) return 'black';
                 if (rightSelectedNode && rightSelectedNode.id === d.id) return '#007bff';
                 return "none";
             })
             .attr("stroke-width", d => {
+                if (d.highlighted) return 5;
                 if (internalSelectedNodeIds.includes(d.id)) return 3;
                 if (rightSelectedNode && rightSelectedNode.id === d.id) return 3;
                 return 0;
             })
-            .attr("stroke-dasharray", d => (rightSelectedNode && rightSelectedNode.id === d.id) ? "6,3" : "0");
-        
+            .attr("stroke-dasharray", d => {
+                if (d.highlighted) return "2,2";
+                if (rightSelectedNode && rightSelectedNode.id === d.id) return "6,3";
+                return "0";
+            });
         node.filter(d => internalSelectedNodeIds.includes(d.id))
             .attr("stroke-dasharray", "0");
     }, [internalSelectedNodeIds, rightSelectedNode]);
@@ -365,7 +396,7 @@ const Graph: React.FC<GraphProps> = ({ data, width = DEFAULT_WIDTH, height = DEF
             ></svg>
         </div>
     );
-};
+});
 
 export default Graph;
                                 

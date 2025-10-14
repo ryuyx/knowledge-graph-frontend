@@ -1,6 +1,7 @@
 import apiClient from './index';
 
 export interface Node {
+    id: string;
     name: string;
     type: string;
 }
@@ -26,10 +27,9 @@ export const getKnowledgeGraph  = async (): Promise<GraphData> => {
 
     // Add category nodes
     data.big_hot_words_with_hot_words.forEach((category: any) => {
-        const categoryName = category.word;
-        const node: Node = { name: categoryName, type: 'category' };
+        const node: Node = { id: category.id, name: category.word, type: 'category' };
         nodes.push(node);
-        nodeMap.set(categoryName, node);
+        nodeMap.set(category.word, node);
     });
 
     // Add topic nodes and links from category to topic
@@ -38,13 +38,13 @@ export const getKnowledgeGraph  = async (): Promise<GraphData> => {
         category.hot_words.forEach((hotWord: any) => {
             const topic = hotWord.word;
             if (!nodeMap.has(topic)) {
-                const node: Node = { name: topic, type: 'topic' };
+                const node: Node = { id: hotWord.id, name: topic, type: 'topic' };
                 nodes.push(node);
                 nodeMap.set(topic, node);
             }
             links.push({
-                source: categoryName,
-                target: topic,
+                source: category.id,
+                target: hotWord.id,
                 weight: 1
             });
 
@@ -55,6 +55,7 @@ export const getKnowledgeGraph  = async (): Promise<GraphData> => {
                 
                 if (!nodeMap.has(itemId)) {
                     const node: Node = { 
+                        id: itemId,
                         name: itemName, 
                         type: item.source_type 
                     };
@@ -64,8 +65,8 @@ export const getKnowledgeGraph  = async (): Promise<GraphData> => {
                 
                 // Link topic to knowledge item
                 links.push({
-                    source: topic,
-                    target: itemName,
+                    source: hotWord.id,
+                    target: itemId,
                     weight: 0.8
                 });
             });
@@ -75,8 +76,8 @@ export const getKnowledgeGraph  = async (): Promise<GraphData> => {
     // Add association links
     data.associations.forEach((assoc: any) => {
         links.push({
-            source: assoc.word1,
-            target: assoc.word2,
+            source: assoc.word1_id,
+            target: assoc.word2_id,
             weight: assoc.similarity_score
         });
     });
