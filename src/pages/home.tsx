@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import Graph from '@/components/Graph'
 import { getKnowledgeGraph, type GraphData as ApiGraphData } from '@/api/graph'
 import AudioCard from '@/components/AudioCard'
+import { chat } from '@/api/chat'
 
 interface Data {
     nodes: {
@@ -21,7 +22,11 @@ interface Data {
 
 function Home() {
     const [activeTab, setActiveTab] = useState('Chat')
-    const [chat, setChat] = useState('')
+    // 分离不同tab的输入内容
+    const [chatMessage, setChatMessage] = useState('')
+    const [linkUrl, setLinkUrl] = useState('')
+    const [longText, setLongText] = useState('')
+    const [response, setResponse] = useState('')
     const [voiceType, setVoiceType] = useState('Fish Audio')
     const [energyLevel, setEnergyLevel] = useState('en-Energetic Male')
     const [friendliness, setFriendliness] = useState('en-Friendly Women')
@@ -50,8 +55,32 @@ function Home() {
         { name: 'Long Text', icon: '📄' }
     ]
 
-    const handleCreatePodcast = () => {
-        console.log('Creating podcast...', { chat, voiceType, energyLevel, friendliness, autoSetting })
+    const handleCreatePodcast = async () => {
+        let currentInput = '';
+        switch(activeTab) {
+            case 'Chat':
+                currentInput = chatMessage;
+                break;
+            case 'Link':
+                currentInput = linkUrl;
+                break;
+            case 'Long Text':
+                currentInput = longText;
+                break;
+            default:
+                currentInput = '';
+        }
+        
+        if (!currentInput.trim()) return;
+        setResponse('');
+        try {
+            await chat(currentInput, (content: string ) => {
+                setResponse(prev => prev + content);
+            });
+        } catch (error) {
+            console.error('Failed to send chat:', error);
+            setResponse('发送失败，请重试。');
+        }
     }
 
     // 双击节点显示详情
@@ -84,7 +113,11 @@ function Home() {
                 const convertedData = {
                     nodes: data.nodes.map(node => ({
                         id: node.name,
-                        group: node.type === 'category' ? 1 : 2,
+                            group: node.type === 'category' ? 1
+                                : node.type === 'topic' ? 2
+                                : node.type === 'FILE' ? 3
+                                : node.type === 'LINK' ? 4
+                                : 0,
                         ...node
                     })),
                     links: data.links
@@ -287,20 +320,73 @@ function Home() {
                                     </>
                                 )}
                             </div>
-                        ) : (
-                            <>
+                        ) : activeTab === 'Chat' ? (
+                            <div className="relative">
                                 <textarea
-                                    value={chat}
-                                    onChange={(e) => setChat(e.target.value)}
+                                    value={chatMessage}
+                                    onChange={(e) => setChatMessage(e.target.value)}
                                     placeholder="Enter your chat message..."
                                     rows={4}
-                                    className="textarea w-full px-6 py-5 rounded-xl shadow-inner relative"
+                                    className="textarea w-full px-6 py-5 rounded-xl shadow-inner"
                                 />
                                 <div className="absolute bottom-4 right-4 text-xs text-base-content/30">
-                                    {chat.length}/1000
+                                    {chatMessage.length}/1000
                                 </div>
-                            </>
-                        )}
+                                {response && (
+                                    <div className="mt-4 p-4 bg-base-200 rounded-xl max-w-4xl">
+                                        <div className="whitespace-pre-wrap">{response}</div>
+                                    </div>
+                                )}
+                            </div>
+                        ) : activeTab === 'Link' ? (
+                            <div className="space-y-4">
+                                <div className="relative">
+                                    <input
+                                        type="url"
+                                        value={linkUrl}
+                                        onChange={(e) => setLinkUrl(e.target.value)}
+                                        placeholder="https://example.com"
+                                        className="input w-full px-6 py-5 rounded-xl shadow-inner text-lg"
+                                    />
+                                    <div className="absolute right-4 top-1/2 transform -translate-y-1/2">
+                                        <svg className="w-5 h-5 text-base-content/30" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                                        </svg>
+                                    </div>
+                                </div>
+                                <div className="text-sm text-base-content/70 px-2">
+                                    支持网页链接、视频链接、文档链接等各种URL
+                                </div>
+                                {response && (
+                                    <div className="mt-4 p-4 bg-base-200 rounded-xl max-w-4xl">
+                                        <h4 className="font-semibold mb-2">解析结果：</h4>
+                                        <div className="whitespace-pre-wrap">{response}</div>
+                                    </div>
+                                )}
+                            </div>
+                        ) : activeTab === 'Long Text' ? (
+                            <div className="relative">
+                                <textarea
+                                    value={longText}
+                                    onChange={(e) => setLongText(e.target.value)}
+                                    placeholder="Paste your long text content here..."
+                                    rows={8}
+                                    className="textarea w-full px-6 py-5 rounded-xl shadow-inner"
+                                />
+                                <div className="absolute bottom-4 right-4 text-xs text-base-content/30">
+                                    {longText.length} characters
+                                </div>
+                                <div className="mt-2 text-sm text-base-content/70 px-2">
+                                    支持文章、论文、报告等长文本内容
+                                </div>
+                                {response && (
+                                    <div className="mt-4 p-4 bg-base-200 rounded-xl max-w-4xl">
+                                        <h4 className="font-semibold mb-2">分析结果：</h4>
+                                        <div className="whitespace-pre-wrap">{response}</div>
+                                    </div>
+                                )}
+                            </div>
+                        ) : null}
                     </div>
                 </div>
 
@@ -318,7 +404,7 @@ function Home() {
                             {activeTab === 'Chat' ? (
                                 <button
                                     onClick={handleCreatePodcast}
-                                    disabled={!chat.trim()}
+                                    disabled={!chatMessage.trim()}
                                     className="btn btn-lg btn-primary font-bold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 disabled:cursor-not-allowed disabled:transform-none"
                                 >
                                     <span className="flex items-center gap-2 text-sm">
@@ -326,28 +412,34 @@ function Home() {
                                             <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
                                             <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
                                         </svg>
-                                        Sent
+                                        Send
                                     </span>
                                 </button>
-                            ) : (
+                            ) : activeTab === 'Upload File' ? null : (
                                 <>
                                     {/* Create Button */}
                                     <button
                                         onClick={handleCreatePodcast}
-                                        disabled={!chat.trim()}
+                                        disabled={
+                                            activeTab === 'Link' ? !linkUrl.trim() : 
+                                            activeTab === 'Long Text' ? !longText.trim() : true
+                                        }
                                         className="btn btn-lg font-bold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 disabled:cursor-not-allowed disabled:transform-none"
                                     >
                                         <span className="flex items-center gap-2 text-sm">
                                             <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                                                 <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clipRule="evenodd" />
                                             </svg>
-                                            Struct
+                                            {activeTab === 'Link' ? 'Parse Link' : 'Analyze Text'}
                                         </span>
                                     </button>
 
                                     <button
                                         onClick={handleCreatePodcast}
-                                        disabled={!chat.trim()}
+                                        disabled={
+                                            activeTab === 'Link' ? !linkUrl.trim() : 
+                                            activeTab === 'Long Text' ? !longText.trim() : true
+                                        }
                                         className="btn btn-lg btn-primary font-bold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 disabled:cursor-not-allowed disabled:transform-none"
                                     >
                                         <span className="flex items-center gap-2 text-sm">

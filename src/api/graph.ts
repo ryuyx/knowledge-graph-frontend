@@ -47,6 +47,28 @@ export const getKnowledgeGraph  = async (): Promise<GraphData> => {
                 target: topic,
                 weight: 1
             });
+
+            // Add knowledge items as nodes and link them to topics
+            hotWord.knowledge_items?.forEach((item: any) => {
+                const itemName = item.item_metadata.original_filename||item.title || item.source_content;
+                const itemId = item.id;
+                
+                if (!nodeMap.has(itemId)) {
+                    const node: Node = { 
+                        name: itemName, 
+                        type: item.source_type 
+                    };
+                    nodes.push(node);
+                    nodeMap.set(itemId, node);
+                }
+                
+                // Link topic to knowledge item
+                links.push({
+                    source: topic,
+                    target: itemName,
+                    weight: 0.8
+                });
+            });
         });
     });
 
