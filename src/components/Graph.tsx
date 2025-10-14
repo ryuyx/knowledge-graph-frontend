@@ -128,9 +128,36 @@ const Graph = forwardRef<any, GraphProps>(({ data, width = DEFAULT_WIDTH, height
             .attr("stroke", d => d.highlighted ? "#ff9800" : (internalSelectedNodeIds.includes(d.id) ? "black" : (rightSelectedNode && rightSelectedNode.id === d.id ? "#007bff" : "none")))
             .attr("stroke-width", d => d.highlighted ? 5 : (internalSelectedNodeIds.includes(d.id) ? 3 : (rightSelectedNode && rightSelectedNode.id === d.id ? 3 : 0)))
             .attr("stroke-dasharray", d => d.highlighted ? "2,2" : (rightSelectedNode && rightSelectedNode.id === d.id ? "6,3" : "0"));
+
+        // 自动调整视图以显示所有高亮节点
+        if (ids.length > 0) {
+            // 获取高亮节点的坐标
+            const highlightedNodes = nodesDataRef.current.filter(node => ids.includes(node.id) && node.x !== undefined && node.y !== undefined);
+            if (highlightedNodes.length > 0) {
+                const xs = highlightedNodes.map(n => n.x!);
+                const ys = highlightedNodes.map(n => n.y!);
+                const minX = Math.min(...xs);
+                const maxX = Math.max(...xs);
+                const minY = Math.min(...ys);
+                const maxY = Math.max(...ys);
+                // 计算边界中心和缩放
+                const svgW = typeof width === 'number' ? width : DEFAULT_WIDTH;
+                const svgH = typeof height === 'number' ? height : DEFAULT_HEIGHT;
+                const padding = 40; // 视图边距
+                const boxW = maxX - minX + padding * 2;
+                const boxH = maxY - minY + padding * 2;
+                const scale = Math.min(svgW / boxW, svgH / boxH, 2); // 限制最大缩放
+                const centerX = (minX + maxX) / 2;
+                const centerY = (minY + maxY) / 2;
+                // 直接对 g 元素做 transform
+                const svgEl = svg;
+                const gEl = d3.select(svgEl).select('g');
+                gEl.transition().duration(500)
+                    .attr('transform', `translate(${svgW / 2},${svgH / 2}) scale(${scale}) translate(${-centerX},${-centerY})`);
+            }
+        }
     };
 
-    // 用useImperativeHandle暴露方法给父组件
     useImperativeHandle(ref, () => ({
         setNodesHighlighted
     }));

@@ -1,13 +1,14 @@
 import { createParser } from 'eventsource-parser';
+import { v4 as uuidv4 } from 'uuid';
 
-export const chat = async (message: string, onMessage: (content: string ) => void) => {
+export const chat = async (message: string, onMessage: (data: string ) => void) => {
     const response = await fetch('/api/chat', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-            session_id: crypto.randomUUID(),
+            session_id: uuidv4(),
             query: message
         })
     });
@@ -19,9 +20,6 @@ export const chat = async (message: string, onMessage: (content: string ) => voi
     const parser = createParser({
         onEvent: (event) => {
             const data = JSON.parse(event.data);
-            // if (data.event === 'RunContent') {
-                // onMessage(data.content);
-            // }
             onMessage(data);
         }
     });

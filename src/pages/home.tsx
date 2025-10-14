@@ -28,10 +28,8 @@ function Home() {
     const [linkUrl, setLinkUrl] = useState('')
     const [longText, setLongText] = useState('')
     const [response, setResponse] = useState('')
-    const [voiceType, setVoiceType] = useState('Fish Audio')
-    const [energyLevel, setEnergyLevel] = useState('en-Energetic Male')
-    const [friendliness, setFriendliness] = useState('en-Friendly Women')
-    const [autoSetting, setAutoSetting] = useState('Auto')
+    // Chat textarea ref for auto-focus
+    const chatTextareaRef = useRef<HTMLTextAreaElement | null>(null)
 
     // 节点详情弹窗相关 state
     const [nodeDetail, setNodeDetail] = useState<any | null>(null)
@@ -73,7 +71,6 @@ function Home() {
             default:
                 currentInput = '';
         }
-        
         if (!currentInput.trim()) return;
         setResponse('');
         try {
@@ -94,6 +91,13 @@ function Home() {
             setResponse('发送失败，请重试。');
         }
     }
+
+    // Auto-focus chat textarea when Chat tab is active
+    useEffect(() => {
+        if (activeTab === 'Chat' && chatTextareaRef.current) {
+            chatTextareaRef.current.focus();
+        }
+    }, [activeTab]);
 
     // 双击节点显示详情
     const handleNodeDoubleClick = (node: any) => {
@@ -203,6 +207,16 @@ function Home() {
         }
     };
 
+    // Handle Ctrl+Enter to send chat
+    const handleChatKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+        if (activeTab === 'Chat' && e.key === 'Enter') {
+            e.preventDefault();
+            if (chatMessage.trim()) {
+                handleCreatePodcast();
+            }
+        }
+    };
+
     return (
         <div className="min-h-screen flex flex-col justify-center items-center bg-gradient-to-br from-white/70 via-pink-50/50 to-blue-50/70 gap-5 pb-30">
             {/* Main Container */}
@@ -243,6 +257,7 @@ function Home() {
                             role="tab"
                             className={`tab flex-1 ${activeTab === tab.name ? ' tab-active' : ''}`}
                             onClick={() => setActiveTab(tab.name)}
+                            tabIndex={0}
                         >
                             <span className={`mr-2`}>{tab.icon}</span>
                             <span className="hidden sm:inline">{tab.name}</span>
@@ -333,16 +348,35 @@ function Home() {
                                 )}
                             </div>
                         ) : activeTab === 'Chat' ? (
-                            <div className="relative">
-                                <textarea
-                                    value={chatMessage}
-                                    onChange={(e) => setChatMessage(e.target.value)}
-                                    placeholder="Enter your chat message..."
-                                    rows={4}
-                                    className="textarea w-full px-6 py-5 rounded-xl shadow-inner"
-                                />
-                                <div className="absolute bottom-4 right-4 text-xs text-base-content/30">
-                                    {chatMessage.length}/1000
+                            <div className="relative w-full">
+                                <div className="relative">
+                                    <textarea
+                                        ref={chatTextareaRef}
+                                        value={chatMessage}
+                                        onChange={(e) => setChatMessage(e.target.value)}
+                                        onKeyDown={handleChatKeyDown}
+                                        placeholder="Enter your chat message..."
+                                        rows={4}
+                                        className="textarea w-full px-6 py-5 rounded-xl shadow-inner pr-32"
+                                        maxLength={1000}
+                                        aria-label="Chat message input"
+                                    />
+                                    <button
+                                        onClick={handleCreatePodcast}
+                                        disabled={!chatMessage.trim()}
+                                        className="btn btn-soft btn-primary btn-circle absolute bottom-4 right-4 z-10 flex items-center justify-center disabled:cursor-not-allowed"
+                                        style={{ width: '42px', height: '42px', minWidth: '42px', minHeight: '42px' }}
+                                        aria-label="发送"
+                                    >
+                                        <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                                            <path d="M3 10h12" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" />
+                                            <path d="M10 6l6 4-6 4" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+                                        </svg>
+                                    </button>
+                                </div>
+                                <div className="flex justify-between mt-1">
+                                    <div className="text-xs text-base-content/30">{chatMessage.length}/1000</div>
+                                    <span className="text-xs text-base-content/40">Enter to send</span>
                                 </div>
                                 {response && (
                                     <div className="mt-4 p-4 bg-base-200 rounded-xl max-w-4xl">
@@ -413,54 +447,43 @@ function Home() {
 
                         {/* Inline actions: Create button + external link */}
                         <div className="flex items-center gap-4">
-                            {activeTab === 'Chat' ? (
-                                <button
-                                    onClick={handleCreatePodcast}
-                                    disabled={!chatMessage.trim()}
-                                    className="btn btn-lg btn-primary font-bold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 disabled:cursor-not-allowed disabled:transform-none"
-                                >
-                                    <span className="flex items-center gap-2 text-sm">
-                                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                                            <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
-                                            <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
-                                        </svg>
-                                        Send
-                                    </span>
-                                </button>
-                            ) : activeTab === 'Upload File' ? null : (
+                            {activeTab === 'Upload File' ? null : (
                                 <>
                                     {/* Create Button */}
-                                    <button
-                                        onClick={handleCreatePodcast}
-                                        disabled={
-                                            activeTab === 'Link' ? !linkUrl.trim() : 
-                                            activeTab === 'Long Text' ? !longText.trim() : true
-                                        }
-                                        className="btn btn-lg font-bold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 disabled:cursor-not-allowed disabled:transform-none"
-                                    >
-                                        <span className="flex items-center gap-2 text-sm">
-                                            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                                                <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clipRule="evenodd" />
-                                            </svg>
-                                            {activeTab === 'Link' ? 'Parse Link' : 'Analyze Text'}
-                                        </span>
-                                    </button>
-
-                                    <button
-                                        onClick={handleCreatePodcast}
-                                        disabled={
-                                            activeTab === 'Link' ? !linkUrl.trim() : 
-                                            activeTab === 'Long Text' ? !longText.trim() : true
-                                        }
-                                        className="btn btn-lg btn-primary font-bold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 disabled:cursor-not-allowed disabled:transform-none"
-                                    >
-                                        <span className="flex items-center gap-2 text-sm">
-                                            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
-                                            </svg>
-                                            Create Podcast
-                                        </span>
-                                    </button>
+                                    {activeTab === 'Link' || activeTab === 'Long Text' ? (
+                                        <>
+                                            <button
+                                                onClick={handleCreatePodcast}
+                                                disabled={
+                                                    activeTab === 'Link' ? !linkUrl.trim() : 
+                                                    activeTab === 'Long Text' ? !longText.trim() : true
+                                                }
+                                                className="btn btn-lg font-bold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 disabled:cursor-not-allowed disabled:transform-none"
+                                            >
+                                                <span className="flex items-center gap-2 text-sm">
+                                                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                                        <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clipRule="evenodd" />
+                                                    </svg>
+                                                    {activeTab === 'Link' ? 'Parse Link' : 'Analyze Text'}
+                                                </span>
+                                            </button>
+                                            <button
+                                                onClick={handleCreatePodcast}
+                                                disabled={
+                                                    activeTab === 'Link' ? !linkUrl.trim() : 
+                                                    activeTab === 'Long Text' ? !longText.trim() : true
+                                                }
+                                                className="btn btn-lg btn-primary font-bold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 disabled:cursor-not-allowed disabled:transform-none"
+                                            >
+                                                <span className="flex items-center gap-2 text-sm">
+                                                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
+                                                    </svg>
+                                                    Create Podcast
+                                                </span>
+                                            </button>
+                                        </>
+                                    ) : null}
                                 </>
                             )}
                         </div>
