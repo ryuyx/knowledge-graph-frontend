@@ -74,8 +74,12 @@ function Home() {
         if (!currentInput.trim()) return;
         setResponse('');
         try {
-            await chat(currentInput, (content: string ) => {
-                setResponse(prev => prev + content);
+            await chat(currentInput, (data: any) => {
+                if (data.event === 'RunContent') {
+                    setResponse(prev => prev + data.content);
+                }else if (data.event === 'RunReferences') {
+                    //todo:make references highlight
+                }
             });
         } catch (error) {
             console.error('Failed to send chat:', error);

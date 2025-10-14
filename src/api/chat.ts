@@ -19,9 +19,10 @@ export const chat = async (message: string, onMessage: (content: string ) => voi
     const parser = createParser({
         onEvent: (event) => {
             const data = JSON.parse(event.data);
-            if (data.event === 'RunContent') {
-                onMessage(data.content);
-            }
+            // if (data.event === 'RunContent') {
+                // onMessage(data.content);
+            // }
+            onMessage(data);
         }
     });
 
