@@ -149,11 +149,22 @@ const Graph = forwardRef<any, GraphProps>(({ data, width = DEFAULT_WIDTH, height
                 const scale = Math.min(svgW / boxW, svgH / boxH, 2); // 限制最大缩放
                 const centerX = (minX + maxX) / 2;
                 const centerY = (minY + maxY) / 2;
-                // 直接对 g 元素做 transform
+                
+                const newTransform = d3.zoomIdentity
+                    .translate(svgW / 2, svgH / 2)
+                    .scale(scale)
+                    .translate(-centerX, -centerY);
+                
                 const svgEl = svg;
                 const gEl = d3.select(svgEl).select('g');
                 gEl.transition().duration(500)
-                    .attr('transform', `translate(${svgW / 2},${svgH / 2}) scale(${scale}) translate(${-centerX},${-centerY})`);
+                    .attr('transform', newTransform.toString())
+                    .on('end', () => {
+                        d3.select(svgEl).call(
+                            (svg as any).__zoom.transform,
+                            newTransform
+                        );
+                    });
             }
         }
     };
@@ -206,6 +217,9 @@ const Graph = forwardRef<any, GraphProps>(({ data, width = DEFAULT_WIDTH, height
             });
 
         svg.call(zoom).on("dblclick.zoom", null);
+        
+        // 保存 zoom 实例以便后续使用
+        (svgRef.current as any).__zoom = zoom;
 
         // File drop handlers
         svg.on("dragover", (event) => {

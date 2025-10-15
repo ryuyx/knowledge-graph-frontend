@@ -134,3 +134,8 @@ export const uploadKnowledgeItem = async (content: File | string, sourceType: st
         parser.feed(decoder.decode(value, { stream: true }));
     }
 };
+
+export const getKnowledgeByTopic = async (id: string): Promise<any> => {
+    const response = await apiClient.get(`/knowledge/by-hot-word/${id}`);
+    return response.data;
+};

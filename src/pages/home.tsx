@@ -35,6 +35,7 @@ function Home() {
 
     // 节点详情弹窗相关 state
     const [nodeDetail, setNodeDetail] = useState<any | null>(null)
+    const nodeDetailModalRef = useRef<HTMLDialogElement | null>(null);
     
     // 选中的节点状态
     const [selectedNodes, setSelectedNodes] = useState<any[]>([])
@@ -47,11 +48,6 @@ function Home() {
 
     // 拖拽上传状态
     const [isDragOver, setIsDragOver] = useState(false)
-
-    // 用于 dialog 的 ref
-    const nodeDetailModalRef = useRef<HTMLDialogElement | null>(null);
-
-    // 加载状态，用于防止重复发送
     const [isLoading, setIsLoading] = useState(false)
 
     const tabs = [
@@ -110,8 +106,15 @@ function Home() {
     // 双击节点显示详情（异步获取）
     const handleNodeDoubleClick = async (node: any) => {
         setNodeDetail(null);
-        // 只对 FILE/LINK 类型节点请求详情
-        if (node && (node.type === 'FILE' || node.type === 'LINK')) {
+        // topic 节点调用 getKnowledgeByTopic 接口
+        if (node && node.type === 'topic') {
+            try {
+                const detail = await import('@/api/graph').then(mod => mod.getKnowledgeByTopic(node.id));
+                setNodeDetail(detail);
+            } catch (error) {
+                setNodeDetail({ error: '获取 topic 详情失败' });
+            }
+        } else if (node && (node.type === 'FILE' || node.type === 'LINK')) {
             try {
                 const detail = await getKnowledgeItem(node.id);
                 setNodeDetail(detail);
