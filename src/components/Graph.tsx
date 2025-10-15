@@ -45,28 +45,27 @@ const Graph = forwardRef<any, GraphProps>(({ data, width = DEFAULT_WIDTH, height
     const nodesDataRef = useRef<Node[]>([]);
     const linksDataRef = useRef<Link[]>([]);
 
-    // Consolidated event handlers
-    const handleNodeClick = (d: Node) => {
+
+    // Consolidated event handlers with useCallback
+    const handleNodeClick = React.useCallback((d: Node) => {
         console.log('节点信息:', d);
         setInternalSelectedNodeIds((prev: string[]) => {
             const newSelectedIds = prev.includes(d.id)
                 ? prev.filter((id: string) => id !== d.id)
                 : [...prev, d.id];
-            
             if (onNodesSelect) {
                 const selectedNodes = nodesDataRef.current.filter(node => newSelectedIds.includes(node.id));
                 onNodesSelect(selectedNodes);
             }
             return newSelectedIds;
         });
-    };
+    }, [onNodesSelect]);
 
-    const createLink = (source: Node, target: Node) => {
+    const createLink = React.useCallback((source: Node, target: Node) => {
         const exists = linksDataRef.current.some(l =>
             (l.source === source.id && l.target === target.id) ||
             (l.source === target.id && l.target === source.id)
         );
-        
         if (!exists) {
             linksDataRef.current.push({ source: source.id, target: target.id });
             // Update links visualization
@@ -86,12 +85,12 @@ const Graph = forwardRef<any, GraphProps>(({ data, width = DEFAULT_WIDTH, height
                     .attr("stroke-opacity", 0.6)
                     .attr("stroke-width", 1.5);
             }
-            simulationRef.current?.force("link", d3.forceLink(linksDataRef.current).id((d: any) => d.id).distance(100));
+            simulationRef.current?.force("link", d3.forceLink(linksDataRef.current).id((d: any) => d.id));
             simulationRef.current?.alpha(0.3).restart();
         }
-    };
+    }, []);
 
-    const handleNodeRightClick = (event: MouseEvent, d: Node) => {
+    const handleNodeRightClick = React.useCallback((event: MouseEvent, d: Node) => {
         event.preventDefault();
         setRightSelectedNode((prev) => {
             if (!prev) {
@@ -103,14 +102,14 @@ const Graph = forwardRef<any, GraphProps>(({ data, width = DEFAULT_WIDTH, height
                 return null;
             }
         });
-    };
+    }, [createLink]);
 
-    const handleNodeDoubleClick = (d: Node) => {
+    const handleNodeDoubleClick = React.useCallback((d: Node) => {
         if (typeof (window as any).onNodeDoubleClick === 'function') {
             (window as any).onNodeDoubleClick(d);
         }
         onNodeDoubleClick?.(d);
-    };
+    }, [onNodeDoubleClick]);
 
     // 批量设置节点高亮状态
     const setNodesHighlighted = (ids: string[], highlighted: boolean) => {
@@ -180,10 +179,15 @@ const Graph = forwardRef<any, GraphProps>(({ data, width = DEFAULT_WIDTH, height
         const w = typeof width === 'number' ? width : DEFAULT_WIDTH;
         const h = typeof height === 'number' ? height : DEFAULT_HEIGHT;
 
+        const chargeForce = d3.forceManyBody()
+            .strength(d => (d as Node).group === 1 ? -300 : -100);
+
         const simulation = d3.forceSimulation(nodes)
-            .force("link", d3.forceLink(links).id((d: any) => d.id).distance(100))
-            .force("charge", d3.forceManyBody().strength(-100))
-            .force("center", d3.forceCenter(w / 2, h / 2))
+            .force("link", d3.forceLink(links).id((d: any) => d.id).distance(100)) 
+            .force("charge", chargeForce)
+            .force("x", d3.forceX(w / 2).strength(0.05))
+            .force("y", d3.forceY(h / 2).strength(0.05))
+            .force("collision", d3.forceCollide(20))
             .on("tick", ticked);
 
         simulationRef.current = simulation;
@@ -289,7 +293,7 @@ const Graph = forwardRef<any, GraphProps>(({ data, width = DEFAULT_WIDTH, height
         }
 
         function dragended(event: d3.D3DragEvent<SVGCircleElement, Node, Node>) {
-            if (!event.active) simulation.alphaTarget(0);
+            if (!event.active) simulation.alphaTarget(0.5).restart(); // 拖拽结束后重启仿真
             event.subject.fx = null;
             event.subject.fy = null;
         }
