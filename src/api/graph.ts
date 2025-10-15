@@ -139,3 +139,8 @@ export const getKnowledgeByTopic = async (id: string): Promise<any> => {
     const response = await apiClient.get(`/knowledge/by-hot-word/${id}`);
     return response.data;
 };
+
+export const getKnowledgeByCategory = async (id: string): Promise<any> => {
+    const response = await apiClient.get(`/knowledge/by-big-hot-word/${id}`);
+    return response.data;
+};

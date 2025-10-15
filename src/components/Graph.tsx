@@ -216,10 +216,15 @@ const Graph = forwardRef<any, GraphProps>(({ data, width = DEFAULT_WIDTH, height
                 g.attr("transform", event.transform);
             });
 
+        const g = svg.append("g");
+
         svg.call(zoom).on("dblclick.zoom", null);
         
         // 保存 zoom 实例以便后续使用
         (svgRef.current as any).__zoom = zoom;
+        
+        const initialTransform = d3.zoomIdentity;
+        svg.call(zoom.transform, initialTransform);
 
         // File drop handlers
         svg.on("dragover", (event) => {
@@ -256,8 +261,6 @@ const Graph = forwardRef<any, GraphProps>(({ data, width = DEFAULT_WIDTH, height
                     onFileDropped?.(file, { x, y });
                 }
             });
-
-        const g = svg.append("g");
 
         const link = g.append("g")
             .attr("stroke", "#999")

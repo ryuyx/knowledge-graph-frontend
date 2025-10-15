@@ -106,8 +106,14 @@ function Home() {
     // 双击节点显示详情（异步获取）
     const handleNodeDoubleClick = async (node: any) => {
         setNodeDetail(null);
-        // topic 节点调用 getKnowledgeByTopic 接口
-        if (node && node.type === 'topic') {
+        if (node && node.type === 'category') {
+            try {
+                const detail = await import('@/api/graph').then(mod => mod.getKnowledgeByCategory(node.id));
+                setNodeDetail(detail);
+            } catch (error) {
+                setNodeDetail({ error: '获取 category 详情失败' });
+            }
+        } else if (node && node.type === 'topic') {
             try {
                 const detail = await import('@/api/graph').then(mod => mod.getKnowledgeByTopic(node.id));
                 setNodeDetail(detail);

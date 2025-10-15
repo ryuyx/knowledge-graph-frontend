@@ -1,0 +1,124 @@
+/* Markdown Styles for DocGear Frontend */
+
+/* Import syntax highlighting styles */
+@import "highlight.js/styles/github.css";
+
+/* Import KaTeX math rendering styles */
+@import "katex/dist/katex.min.css";
+
+
+/* Base styles for markdown content */
+.markdown-content {
+    line-height: 1.6;
+}
+
+/* Code block styles */
+.markdown-content pre {
+    border-radius: 8px;
+    border-color: #f3f3f3;
+    border-width: 2px;
+    padding: 8px;
+    font-size: 14px;
+}
+
+/* Inline code styles */
+.markdown-content code:not(pre code) {
+    background-color: #f3f4f6;
+    color: #dc2626;
+    padding: 2px 4px;
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.9em;
+    display: inline;
+}
+
+/* Additional inline code styles */
+.markdown-content .inline-code {
+    margin-inline: 10px;
+    border-radius: 4px;
+}
+
+/* KaTeX base styles */
+.markdown-content .katex {
+    font-size: 1em !important;
+    line-height: 2.5;
+}
+
+/* Display math styles */
+.markdown-content .katex-display {
+    margin: 1em 0 !important;
+}
+
+/* Accessibility for KaTeX */
+.markdown-content .katex-html {
+    white-space: nowrap;
+}
+
+.markdown-content .katex .katex-mathml {
+    position: absolute;
+    clip: rect(1px, 1px, 1px, 1px);
+    padding: 0;
+    border: 0;
+    height: 1px;
+    width: 1px;
+    overflow: hidden;
+}
+
+/* Inline math styles */
+.markdown-content .katex-math,
+.markdown-content .katex-inline-math {
+    display: inline-block;
+}
+
+/* Table styles */
+.markdown-content table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 16px 0;
+    border: 1px solid #e5e7eb;
+}
+
+/* Table cell styles */
+.markdown-content th,
+.markdown-content td {
+    border: 1px solid #e5e7eb;
+    padding: 8px 12px;
+    text-align: left;
+}
+
+/* Table header styles */
+.markdown-content th {
+    background-color: #f9fafb;
+    font-weight: 600;
+}
+
+/* Ordered list styles */
+.markdown-content ol {
+    list-style-type: decimal !important;
+    padding-left: 1.5em !important;
+    padding-top: 1.5em !important;
+}
+
+/* List item styles */
+.markdown-content ol li {
+    display: list-item !important;
+    margin-left: 0 !important;
+}
+
+/* Nested ordered list styles */
+.markdown-content ol ol {
+    list-style-type: lower-alpha !important;
+}
+
+/* Deeply nested ordered list styles */
+.markdown-content ol ol ol {
+    list-style-type: lower-roman !important;
+}
+
+/* Horizontal rule styles */
+.markdown-content hr {
+    margin-block: 3rem 0;
+    border-color: #d1d5db;
+    border-style: solid;
+    border-width: 1px 0 0 0;
+}
