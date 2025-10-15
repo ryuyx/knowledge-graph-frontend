@@ -47,6 +47,7 @@ const Graph = forwardRef<any, GraphProps>(({ data, width = DEFAULT_WIDTH, height
 
     // Consolidated event handlers
     const handleNodeClick = (d: Node) => {
+        console.log('节点信息:', d);
         setInternalSelectedNodeIds((prev: string[]) => {
             const newSelectedIds = prev.includes(d.id)
                 ? prev.filter((id: string) => id !== d.id)

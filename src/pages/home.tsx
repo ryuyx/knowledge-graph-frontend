@@ -1,7 +1,9 @@
 import { useState, useRef, useEffect } from 'react'
+import NodeDetailDialog from '@/components/NodeDetailDialog';
 import Graph from '@/components/Graph'
-import { getKnowledgeGraph, type GraphData as ApiGraphData } from '@/api/graph'
+import { getKnowledgeGraph, uploadKnowledgeItem, type GraphData as ApiGraphData } from '@/api/graph'
 import AudioCard from '@/components/AudioCard'
+import { getKnowledgeItem } from '@/api/graph';
 import { chat } from '@/api/chat'
 
 interface Data {
@@ -49,6 +51,9 @@ function Home() {
     // 用于 dialog 的 ref
     const nodeDetailModalRef = useRef<HTMLDialogElement | null>(null);
 
+    // 加载状态，用于防止重复发送
+    const [isLoading, setIsLoading] = useState(false)
+
     const tabs = [
         { name: 'Chat', icon: '💭' },
         { name: 'Link', icon: '🔗' },
@@ -73,6 +78,7 @@ function Home() {
         }
         if (!currentInput.trim()) return;
         setResponse('');
+        setIsLoading(true);
         try {
             await chat(currentInput, (data: any) => {
                 if (data.event === 'RunContent') {
@@ -89,6 +95,8 @@ function Home() {
         } catch (error) {
             console.error('Failed to send chat:', error);
             setResponse('发送失败，请重试。');
+        } finally {
+            setIsLoading(false);
         }
     }
 
@@ -99,10 +107,20 @@ function Home() {
         }
     }, [activeTab]);
 
-    // 双击节点显示详情
-    const handleNodeDoubleClick = (node: any) => {
-        setNodeDetail(node);
-        // 打开 modal
+    // 双击节点显示详情（异步获取）
+    const handleNodeDoubleClick = async (node: any) => {
+        setNodeDetail(null);
+        // 只对 FILE/LINK 类型节点请求详情
+        if (node && (node.type === 'FILE' || node.type === 'LINK')) {
+            try {
+                const detail = await getKnowledgeItem(node.id);
+                setNodeDetail(detail);
+            } catch (error) {
+                setNodeDetail({ error: '获取详情失败' });
+            }
+        } else {
+            setNodeDetail(node);
+        }
         setTimeout(() => {
             if (nodeDetailModalRef.current) nodeDetailModalRef.current.showModal();
         }, 0);
@@ -121,59 +139,60 @@ function Home() {
     };
 
     // 获取图数据
+    const fetchGraphData = async () => {
+        try {
+            const data = await getKnowledgeGraph();
+            // 转换数据格式以匹配Graph组件
+            const convertedData = {
+                nodes: data.nodes.map(node => ({
+                    group: node.type === 'category' ? 1
+                            : node.type === 'topic' ? 2
+                            : node.type === 'FILE' ? 3
+                            : node.type === 'LINK' ? 4
+                            : 0,
+                    ...node
+                })),
+                links: data.links
+            };
+            setGraphData(convertedData);
+        } catch (error) {
+            console.error('Failed to fetch graph data:', error);
+        }
+    };
+
+    // 初始化时获取图数据
     useEffect(() => {
-        const fetchGraphData = async () => {
-            try {
-                const data = await getKnowledgeGraph();
-                // 转换数据格式以匹配Graph组件
-                const convertedData = {
-                    nodes: data.nodes.map(node => ({
-                        group: node.type === 'category' ? 1
-                                : node.type === 'topic' ? 2
-                                : node.type === 'FILE' ? 3
-                                : node.type === 'LINK' ? 4
-                                : 0,
-                        ...node
-                    })),
-                    links: data.links
-                };
-                setGraphData(convertedData);
-            } catch (error) {
-                console.error('Failed to fetch graph data:', error);
-            }
-        };
         fetchGraphData();
     }, []);
 
-    // 处理文件拖拽 - 现在只处理文件内容读取等逻辑
-    const handleFileDropped = (file: File, position: { x: number; y: number }) => {
+    // 处理文件拖拽 - 调用uploadKnowledgeItem上传文件
+    const handleFileDropped = async (file: File, position: { x: number; y: number }) => {
         console.log('File dropped:', file.name, 'at position:', position);
-        
-        // 如果需要读取文件内容，可以使用 FileReader
-        if (file.type.startsWith('text/')) {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                const content = e.target?.result as string;
-                console.log('File content:', content.substring(0, 200) + '...');
-                // 可以将内容存储起来，比如显示在详情弹窗中
-                setNodeDetail({
-                    id: file.name,
-                    group: 2,
-                    content: content,
-                    fileType: file.type,
-                    fileSize: file.size
-                });
-            };
-            reader.readAsText(file);
-        } else {
-            // 对于非文本文件，存储基本信息
-            setNodeDetail({
-                id: file.name,
-                group: 2,
-                fileType: file.type,
-                fileSize: file.size,
-                content: `文件类型: ${file.type}\n文件大小: ${(file.size / 1024).toFixed(2)} KB`
+        setResponse('');
+        setIsLoading(true);
+        let newKnowledgeItemId: string | null = null;
+        try {
+            await uploadKnowledgeItem(file, 'FILE', (data: any) => {
+                if (data.type === 'TEXT_EXTRACTION' && data.data.knowledge_item_id) {
+                    newKnowledgeItemId = data.data.knowledge_item_id;
+                }
             });
+            // 上传完成后刷新图数据，并赋值新节点id
+            if (typeof newKnowledgeItemId === 'string' && graphData) {
+                // 找到刚刚添加的节点（假设用文件名和 group 匹配）
+                const updatedNodes = graphData.nodes.map(node => {
+                    if (node.name === file.name && node.group === 3) {
+                        return { ...node, id: newKnowledgeItemId as string };
+                    }
+                    return node;
+                });
+                setGraphData({ ...graphData, nodes: updatedNodes });
+            }
+        } catch (error) {
+            console.error('Failed to upload file:', error);
+            setResponse('上传失败，请重试。');
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -211,7 +230,7 @@ function Home() {
     const handleChatKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
         if (activeTab === 'Chat' && e.key === 'Enter') {
             e.preventDefault();
-            if (chatMessage.trim()) {
+            if (chatMessage.trim() && !isLoading) {
                 handleCreatePodcast();
             }
         }
@@ -363,7 +382,7 @@ function Home() {
                                     />
                                     <button
                                         onClick={handleCreatePodcast}
-                                        disabled={!chatMessage.trim()}
+                                        disabled={!chatMessage.trim() || isLoading}
                                         className="btn btn-soft btn-primary btn-circle absolute bottom-4 right-4 z-10 flex items-center justify-center disabled:cursor-not-allowed"
                                         style={{ width: '42px', height: '42px', minWidth: '42px', minHeight: '42px' }}
                                         aria-label="发送"
@@ -455,8 +474,8 @@ function Home() {
                                             <button
                                                 onClick={handleCreatePodcast}
                                                 disabled={
-                                                    activeTab === 'Link' ? !linkUrl.trim() : 
-                                                    activeTab === 'Long Text' ? !longText.trim() : true
+                                                    activeTab === 'Link' ? !linkUrl.trim() || isLoading : 
+                                                    activeTab === 'Long Text' ? !longText.trim() || isLoading : true
                                                 }
                                                 className="btn btn-lg font-bold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 disabled:cursor-not-allowed disabled:transform-none"
                                             >
@@ -470,8 +489,8 @@ function Home() {
                                             <button
                                                 onClick={handleCreatePodcast}
                                                 disabled={
-                                                    activeTab === 'Link' ? !linkUrl.trim() : 
-                                                    activeTab === 'Long Text' ? !longText.trim() : true
+                                                    activeTab === 'Link' ? !linkUrl.trim() || isLoading : 
+                                                    activeTab === 'Long Text' ? !longText.trim() || isLoading : true
                                                 }
                                                 className="btn btn-lg btn-primary font-bold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 disabled:cursor-not-allowed disabled:transform-none"
                                             >
@@ -518,21 +537,7 @@ function Home() {
                 </div>
             </section>
             {/* 节点详情弹窗 */}
-            <dialog id="node_detail_modal" className="modal" ref={nodeDetailModalRef}>
-                <div className="modal-box">
-                    <form method="dialog">
-                        <button className="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
-                    </form>
-                    <h3 className="font-bold text-lg mb-2">文件详情</h3>
-                    {nodeDetail ? (
-                        <div className="text-left break-all">
-                            “内容内容内容内容内容内容内容内容内容内容内容内容内容内容内容内容内容内容内容”
-                        </div>
-                    ) : (
-                        <div>暂无详情</div>
-                    )}
-                </div>
-            </dialog>
+            <NodeDetailDialog nodeDetail={nodeDetail} ref={nodeDetailModalRef} />
         </div>
     )
 }

@@ -1,4 +1,5 @@
 import apiClient from './index';
+import { createParser } from 'eventsource-parser';
 
 export interface Node {
     id: string;
@@ -85,4 +86,51 @@ export const getKnowledgeGraph  = async (): Promise<GraphData> => {
     return { nodes, links };
 };
 
+export const getKnowledgeItem = async (id: string): Promise<any> => {
+    const response = await apiClient.get(`/knowledge/${id}`);
+    return response.data;
+}   
 
+export const uploadKnowledgeItem = async (content: File | string, sourceType: string, onMessage: (data: any) => void) => {
+    let response: Response;
+
+    if (sourceType === 'FILE') {
+        const formData = new FormData();
+        formData.append('file', content as File);
+        formData.append('source_type', sourceType);
+        response = await fetch('/api/knowledge/collect', {
+            method: 'POST',
+            body: formData
+        });
+    } else if (sourceType === 'URL') {
+        response = await fetch('/api/knowledge/collect', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ source_type: sourceType, url: content as string })
+        });
+    } else {
+        throw new Error('Invalid sourceType');
+    }
+
+    if (!response.body) {
+        throw new Error('Response body is not available');
+    }
+
+    const parser = createParser({
+        onEvent: (event) => {
+            const data = JSON.parse(event.data);
+            onMessage(data);
+        }
+    });
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+
+    while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        parser.feed(decoder.decode(value, { stream: true }));
+    }
+};
