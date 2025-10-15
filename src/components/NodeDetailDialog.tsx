@@ -4,9 +4,15 @@ interface NodeDetailDialogProps {
     nodeDetail: any | null;
 }
 
-const NodeDetailDialog = forwardRef<HTMLDialogElement, NodeDetailDialogProps>(({ nodeDetail }, ref) => (
-    <dialog id="node_detail_modal" className="modal" ref={ref as any}>
-        <div className="modal-box">
+const NodeDetailDialog = forwardRef<HTMLDialogElement, NodeDetailDialogProps>(({ nodeDetail }, ref) => {
+    const handleBgClick = (e: React.MouseEvent<HTMLDialogElement>) => {
+        if (e.target === e.currentTarget) {
+            (ref as any)?.current?.close?.();
+        }
+    };
+    return (
+        <dialog id="node_detail_modal" className="modal" ref={ref as any} onClick={handleBgClick}>
+            <div className="modal-box w-[700px] max-w-full h-[600px]">
             <form method="dialog">
                 <button className="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
             </form>
@@ -15,7 +21,7 @@ const NodeDetailDialog = forwardRef<HTMLDialogElement, NodeDetailDialogProps>(({
                 nodeDetail.error ? (
                     <div className="text-red-500">{nodeDetail.error}</div>
                 ) : nodeDetail.extracted_text ? (
-                    <div className="text-left break-all whitespace-pre-wrap max-h-96 overflow-auto">
+                    <div className="text-left break-all whitespace-pre-wrap h-[90%] overflow-auto">
                         <div className="mb-2 font-semibold">{nodeDetail.title || nodeDetail.metadata?.original_filename || nodeDetail.name}</div>
                         <div className="mb-2 text-xs text-gray-400">ID: {nodeDetail.id}</div>
                         <div className="mb-2 text-xs text-gray-400">类型: {nodeDetail.source_type}</div>
@@ -35,7 +41,8 @@ const NodeDetailDialog = forwardRef<HTMLDialogElement, NodeDetailDialogProps>(({
                 <div>暂无详情</div>
             )}
         </div>
-    </dialog>
-));
+        </dialog>
+    );
+});
 
 export default NodeDetailDialog;
