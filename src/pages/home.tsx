@@ -51,6 +51,23 @@ function Home() {
     const [isDragOver, setIsDragOver] = useState(false)
     const [isLoading, setIsLoading] = useState(false)
     
+    // 上传进度状态
+    interface UploadStage {
+        name: string;
+        status: 'pending' | 'processing' | 'completed' | 'failed';
+        icon: string;
+        message?: string;
+    }
+    
+    const [uploadStages, setUploadStages] = useState<UploadStage[]>([
+        { name: 'TEXT_EXTRACTION', status: 'pending', icon: '📄', message: 'Extracting text...' },
+        { name: 'HOT_WORD_GENERATION', status: 'pending', icon: '🔤', message: 'Generating keywords...' },
+        { name: 'EMBEDDING_GENERATION', status: 'pending', icon: '🧠', message: 'Creating embeddings...' },
+        { name: 'HOT_WORD_ASSOCIATION_GENERATION', status: 'pending', icon: '🔗', message: 'Building associations...' },
+        { name: 'PODCAST_SCRIPT_GENERATION', status: 'pending', icon: '🎙️', message: 'Generating podcast script...' }
+    ]);
+    const [currentFileName, setCurrentFileName] = useState<string>('');
+    
     // 播客列表状态
     const [podcasts, setPodcasts] = useState<PodcastItem[]>([])
     const [podcastsLoading, setPodcastsLoading] = useState(false)
@@ -193,34 +210,99 @@ function Home() {
         fetchPodcasts();
     }, []);
 
+    // 重置上传进度状态
+    const resetUploadStages = () => {
+        setUploadStages([
+            { name: 'TEXT_EXTRACTION', status: 'pending', icon: '📄', message: 'Extracting text...' },
+            { name: 'HOT_WORD_GENERATION', status: 'pending', icon: '🔤', message: 'Generating keywords...' },
+            { name: 'EMBEDDING_GENERATION', status: 'pending', icon: '🧠', message: 'Creating embeddings...' },
+            { name: 'HOT_WORD_ASSOCIATION_GENERATION', status: 'pending', icon: '🔗', message: 'Building associations...' },
+            { name: 'PODCAST_SCRIPT_GENERATION', status: 'pending', icon: '🎙️', message: 'Generating podcast script...' }
+        ]);
+        setCurrentFileName('');
+    };
+
+    // 更新特定阶段的状态
+    const updateStageStatus = (stageName: string, status: 'processing' | 'completed' | 'failed', detail?: string) => {
+        console.log('🔄 Updating stage:', stageName, 'to', status, detail);
+        setUploadStages(prev => {
+            const updated = prev.map(stage => 
+                stage.name === stageName 
+                    ? { ...stage, status, message: detail || stage.message }
+                    : stage
+            );
+            console.log('📊 Updated stages:', updated);
+            return updated;
+        });
+    };
+
     // 处理文件拖拽 - 调用uploadKnowledgeItem上传文件
     const handleFileDropped = async (file: File, position: { x: number; y: number }) => {
         console.log('File dropped:', file.name, 'at position:', position);
         setResponse('');
         setIsLoading(true);
+        setCurrentFileName(file.name);
+        
+        // 重置并开始第一个阶段
+        setUploadStages([
+            { name: 'TEXT_EXTRACTION', status: 'processing', icon: '📄', message: 'Extracting text...' },
+            { name: 'HOT_WORD_GENERATION', status: 'pending', icon: '🔤', message: 'Generating keywords...' },
+            { name: 'EMBEDDING_GENERATION', status: 'pending', icon: '🧠', message: 'Creating embeddings...' },
+            { name: 'HOT_WORD_ASSOCIATION_GENERATION', status: 'pending', icon: '🔗', message: 'Building associations...' },
+            { name: 'PODCAST_SCRIPT_GENERATION', status: 'pending', icon: '🎙️', message: 'Generating podcast script...' }
+        ]);
+        
         let newKnowledgeItemId: string | null = null;
         try {
             await uploadKnowledgeItem(file, 'FILE', (data: any) => {
-                if (data.type === 'TEXT_EXTRACTION' && data.data.knowledge_item_id) {
-                    newKnowledgeItemId = data.data.knowledge_item_id;
+                console.log('📨 SSE Event received:', data);
+                const eventType = data.type;
+                
+                if (eventType === 'TEXT_EXTRACTION') {
+                    updateStageStatus('TEXT_EXTRACTION', 'completed', 'Text extracted successfully');
+                    if (data.data.knowledge_item_id) {
+                        newKnowledgeItemId = data.data.knowledge_item_id;
+                    }
+                    // 开始下一阶段
+                    updateStageStatus('HOT_WORD_GENERATION', 'processing');
+                } else if (eventType === 'HOT_WORD_GENERATION') {
+                    updateStageStatus('HOT_WORD_GENERATION', 'completed', `Generated ${data.data?.length || 0} keywords`);
+                    updateStageStatus('EMBEDDING_GENERATION', 'processing');
+                } else if (eventType === 'EMBEDDING_GENERATION') {
+                    updateStageStatus('EMBEDDING_GENERATION', 'completed', 'Embeddings created');
+                    updateStageStatus('HOT_WORD_ASSOCIATION_GENERATION', 'processing');
+                } else if (eventType === 'HOT_WORD_ASSOCIATION_GENERATION') {
+                    updateStageStatus('HOT_WORD_ASSOCIATION_GENERATION', 'completed', 'Associations built');
+                    updateStageStatus('PODCAST_SCRIPT_GENERATION', 'processing');
+                } else if (eventType === 'PODCAST_SCRIPT_GENERATION') {
+                    updateStageStatus('PODCAST_SCRIPT_GENERATION', 'completed', 'Podcast script ready');
+                } else if (eventType === 'FAILED') {
+                    // 找到当前处理中的阶段并标记为失败
+                    const currentStage = uploadStages.find(s => s.status === 'processing');
+                    if (currentStage) {
+                        updateStageStatus(currentStage.name, 'failed', data.data?.error || 'Processing failed');
+                    }
                 }
             });
-            // 上传完成后刷新图数据，并赋值新节点id
-            if (typeof newKnowledgeItemId === 'string' && graphData) {
-                // 找到刚刚添加的节点（假设用文件名和 group 匹配）
-                const updatedNodes = graphData.nodes.map(node => {
-                    if (node.name === file.name && node.group === 3) {
-                        return { ...node, id: newKnowledgeItemId as string };
-                    }
-                    return node;
-                });
-                setGraphData({ ...graphData, nodes: updatedNodes });
-            }
+            
+            // 上传完成后刷新图数据
+            await fetchGraphData();
+            setResponse('✅ Knowledge item successfully processed and added to graph!');
         } catch (error) {
             console.error('Failed to upload file:', error);
-            setResponse('上传失败，请重试。');
+            setResponse('❌ Upload failed. Please try again.');
+            // 标记所有处理中的阶段为失败
+            setUploadStages(prev => prev.map(stage => 
+                stage.status === 'processing' ? { ...stage, status: 'failed' as const } : stage
+            ));
         } finally {
             setIsLoading(false);
+            // 3秒后重置进度显示
+            setTimeout(() => {
+                if (!isLoading) {
+                    resetUploadStages();
+                }
+            }, 5000);
         }
     };
 
@@ -347,53 +429,133 @@ function Home() {
                             </div>
                         </div>
                         {activeTab === 'Upload File' ? (
-                            <div 
-                                className={`flex flex-col items-center justify-center w-full py-8 border-2 border-dashed rounded-xl transition-all duration-200 ${
-                                    isDragOver 
-                                        ? 'border-primary bg-primary/10 scale-[1.02]' 
-                                        : 'border-base-300 hover:border-primary/50 hover:bg-base-50'
-                                }`}
-                                onDragEnter={handleDragEnter}
-                                onDragLeave={handleDragLeave}
-                                onDragOver={handleDragOver}
-                                onDrop={handleDrop}
-                            >
-                                {isDragOver ? (
-                                    <>
-                                        <svg className="w-16 h-16 text-primary mb-4 animate-bounce" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                                        </svg>
-                                        <div className="text-lg font-semibold text-primary mb-2">松开鼠标上传文件</div>
-                                        <div className="text-sm text-base-content/70">支持拖拽或点击上传文件</div>
-                                    </>
-                                ) : (
-                                    <>
-                                        <label htmlFor="file-upload" className="btn btn-primary mb-4 cursor-pointer">
-                                            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2" />
-                                                <path strokeLinecap="round" strokeLinejoin="round" d="M7 10l5 5 5-5" />
-                                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 15V3" />
+                            <>
+                                {console.log('✅ Rendering Upload File tab content')}
+                                <div 
+                                    className={`flex flex-col items-center justify-center w-full py-8 border-2 border-dashed rounded-xl transition-all duration-200 ${
+                                        isDragOver 
+                                            ? 'border-primary bg-primary/10 scale-[1.02]' 
+                                            : 'border-base-300 hover:border-primary/50 hover:bg-base-50'
+                                    }`}
+                                    onDragEnter={handleDragEnter}
+                                    onDragLeave={handleDragLeave}
+                                    onDragOver={handleDragOver}
+                                    onDrop={handleDrop}
+                                >
+                                    {isDragOver ? (
+                                        <>
+                                            <svg className="w-16 h-16 text-primary mb-4 animate-bounce" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                                             </svg>
-                                            选择文件上传
-                                        </label>
-                                        <input
-                                            id="file-upload"
-                                            type="file"
-                                            className="file-input file-input-bordered w-full max-w-xs mb-4"
-                                            onChange={e => {
-                                                const file = e.target.files?.[0];
-                                                if (file) {
-                                                    handleFileDropped(file, { x: 0, y: 0 });
-                                                }
-                                            }}
-                                        />
-                                        <div className="text-center">
-                                            <div className="text-base-content/70 mb-1">或者将文件拖拽到此处</div>
-                                            <div className="text-xs text-base-content/50">支持所有文件类型</div>
+                                            <div className="text-lg font-semibold text-primary mb-2">松开鼠标上传文件</div>
+                                            <div className="text-sm text-base-content/70">支持拖拽或点击上传文件</div>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <label htmlFor="file-upload" className="btn btn-primary mb-4 cursor-pointer">
+                                                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2" />
+                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M7 10l5 5 5-5" />
+                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 15V3" />
+                                                </svg>
+                                                选择文件上传
+                                            </label>
+                                            <input
+                                                id="file-upload"
+                                                type="file"
+                                                className="file-input file-input-bordered w-full max-w-xs mb-4"
+                                                onChange={e => {
+                                                    const file = e.target.files?.[0];
+                                                    if (file) {
+                                                        handleFileDropped(file, { x: 0, y: 0 });
+                                                    }
+                                                }}
+                                            />
+                                            <div className="text-center">
+                                                <div className="text-base-content/70 mb-1">或者将文件拖拽到此处</div>
+                                                <div className="text-xs text-base-content/50">支持所有文件类型</div>
+                                            </div>
+                                        </>
+                                    )}
+                                </div>
+                                
+                                {/* Upload Progress Display */}
+                                {(() => {
+                                    console.log('🖼️ Render check:', { isLoading, currentFileName, stagesCount: uploadStages.length, stages: uploadStages });
+                                    return null;
+                                })()}
+                                {(isLoading || currentFileName) && (
+                                    <div className="mt-6 p-6 bg-gradient-to-br from-base-200 to-base-100 rounded-2xl shadow-lg border border-base-300">
+                                        <div className="flex items-center gap-3 mb-6">
+                                            <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center animate-pulse">
+                                                <svg className="w-6 h-6 text-primary" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                                </svg>
+                                            </div>
+                                            <div className="flex-1">
+                                                <h3 className="font-semibold text-lg">Processing Knowledge Item</h3>
+                                                <p className="text-sm text-base-content/60 truncate">{currentFileName}</p>
+                                            </div>
                                         </div>
-                                    </>
+                                        
+                                        <div className="space-y-3">
+                                            {uploadStages.map((stage) => (
+                                                <div 
+                                                    key={stage.name}
+                                                    className={`flex items-center gap-4 p-3 rounded-lg transition-all duration-300 ${
+                                                        stage.status === 'processing' ? 'bg-primary/10 shadow-sm scale-[1.02]' :
+                                                        stage.status === 'completed' ? 'bg-success/10' :
+                                                        stage.status === 'failed' ? 'bg-error/10' :
+                                                        'bg-base-100/50'
+                                                    }`}
+                                                >
+                                                    <div className="text-2xl">{stage.icon}</div>
+                                                    <div className="flex-1">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className={`font-medium text-sm ${
+                                                                stage.status === 'processing' ? 'text-primary' :
+                                                                stage.status === 'completed' ? 'text-success' :
+                                                                stage.status === 'failed' ? 'text-error' :
+                                                                'text-base-content/40'
+                                                            }`}>
+                                                                {stage.message}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                    <div>
+                                                        {stage.status === 'processing' && (
+                                                            <span className="loading loading-spinner loading-sm text-primary"></span>
+                                                        )}
+                                                        {stage.status === 'completed' && (
+                                                            <svg className="w-5 h-5 text-success" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                                            </svg>
+                                                        )}
+                                                        {stage.status === 'failed' && (
+                                                            <svg className="w-5 h-5 text-error" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                                            </svg>
+                                                        )}
+                                                        {stage.status === 'pending' && (
+                                                            <div className="w-5 h-5 rounded-full border-2 border-base-300"></div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
                                 )}
-                            </div>
+                                
+                                {response && !isLoading && (
+                                    <div className={`mt-4 p-4 rounded-xl ${
+                                        response.includes('✅') ? 'bg-success/10 border border-success/20' : 
+                                        response.includes('❌') ? 'bg-error/10 border border-error/20' : 
+                                        'bg-base-200'
+                                    }`}>
+                                        <div className="whitespace-pre-wrap">{response}</div>
+                                    </div>
+                                )}
+                            </>
                         ) : activeTab === 'Chat' ? (
                             <div className="relative w-full">
                                 <div className="relative">
