@@ -113,6 +113,7 @@ function Doc() {
                             ol: ({node, ...props}) => <ol className="list-decimal ml-6 mb-3 space-y-1" {...props} />,
                             li: ({node, ...props}) => <li className="text-base-content" {...props} />,
                             blockquote: ({node, ...props}) => <blockquote className="border-l-4 border-primary pl-4 italic my-4 text-base-content/80" {...props} />,
+                            // @ts-ignore
                             code: ({node, inline, ...props}) => 
                               inline 
                                 ? <code className="bg-base-200 px-1.5 py-0.5 rounded text-sm font-mono" {...props} />

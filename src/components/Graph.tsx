@@ -37,10 +37,12 @@ const DEFAULT_HEIGHT = 200;
 
 const Graph = forwardRef<any, GraphProps>(({ data, width = DEFAULT_WIDTH, height = DEFAULT_HEIGHT, onNodeDoubleClick, onNodesSelect, selectedNodeIds = [], onFileDropped }, ref) => {
     const svgRef = useRef<SVGSVGElement>(null);
+    const containerRef = useRef<HTMLDivElement>(null);
     const [internalSelectedNodeIds, setInternalSelectedNodeIds] = useState<string[]>([]);
     const [dragOverPosition, setDragOverPosition] = useState<{ x: number; y: number } | null>(null);
     const [rightSelectedNode, setRightSelectedNode] = useState<Node | null>(null);
     const [highlightedNodeIds, setHighlightedNodeIds] = useState<string[]>([]);
+    const [isFullscreen, setIsFullscreen] = useState(false);
     const simulationRef = useRef<d3.Simulation<Node, Link> | null>(null);
     const nodesDataRef = useRef<Node[]>([]);
     const linksDataRef = useRef<Link[]>([]);
@@ -172,6 +174,35 @@ const Graph = forwardRef<any, GraphProps>(({ data, width = DEFAULT_WIDTH, height
     useImperativeHandle(ref, () => ({
         setNodesHighlighted
     }));
+
+    // Fullscreen functionality
+    const toggleFullscreen = React.useCallback(async () => {
+        if (!containerRef.current) return;
+        
+        try {
+            if (!document.fullscreenElement) {
+                await containerRef.current.requestFullscreen();
+                setIsFullscreen(true);
+            } else {
+                await document.exitFullscreen();
+                setIsFullscreen(false);
+            }
+        } catch (error) {
+            console.error('Failed to toggle fullscreen:', error);
+        }
+    }, []);
+
+    // Listen for fullscreen changes
+    useEffect(() => {
+        const handleFullscreenChange = () => {
+            setIsFullscreen(!!document.fullscreenElement);
+        };
+
+        document.addEventListener('fullscreenchange', handleFullscreenChange);
+        return () => {
+            document.removeEventListener('fullscreenchange', handleFullscreenChange);
+        };
+    }, []);
 
     useEffect(() => {
         if (!svgRef.current) return;
@@ -427,9 +458,33 @@ const Graph = forwardRef<any, GraphProps>(({ data, width = DEFAULT_WIDTH, height
 
     return (
         <div
-            style={{ position: "relative", width: "100%", height: "100%" }}
+            ref={containerRef}
+            style={{ 
+                position: "relative", 
+                width: "100%", 
+                height: "100%",
+                backgroundColor: isFullscreen ? "#fff" : "transparent"
+            }}
             onContextMenu={e => e.preventDefault()}
         >
+            {/* Fullscreen Button */}
+            <button
+                onClick={toggleFullscreen}
+                className="btn btn-circle btn-sm absolute top-2 right-2 z-50 shadow-lg hover:scale-110 transition-transform"
+                title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
+                aria-label={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
+            >
+                {isFullscreen ? (
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 9V4.5M9 9H4.5M9 9L3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5m0-4.5l5.25 5.25" />
+                    </svg>
+                ) : (
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15" />
+                    </svg>
+                )}
+            </button>
+            
             <svg
                 ref={svgRef}
                 width={width}
