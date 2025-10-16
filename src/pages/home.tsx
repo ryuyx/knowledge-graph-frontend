@@ -5,6 +5,7 @@ import { getKnowledgeGraph, uploadKnowledgeItem, type GraphData as ApiGraphData 
 import AudioCard from '@/components/AudioCard'
 import { getKnowledgeItem } from '@/api/graph';
 import { chat } from '@/api/chat'
+import { getAllPodcasts, type PodcastItem } from '@/api/podcast'
 
 interface Data {
     nodes: {
@@ -49,6 +50,10 @@ function Home() {
     // 拖拽上传状态
     const [isDragOver, setIsDragOver] = useState(false)
     const [isLoading, setIsLoading] = useState(false)
+    
+    // 播客列表状态
+    const [podcasts, setPodcasts] = useState<PodcastItem[]>([])
+    const [podcastsLoading, setPodcastsLoading] = useState(false)
 
     const tabs = [
         { name: 'Chat', icon: '💭' },
@@ -169,9 +174,23 @@ function Home() {
         }
     };
 
-    // 初始化时获取图数据
+    // 获取播客列表
+    const fetchPodcasts = async () => {
+        setPodcastsLoading(true);
+        try {
+            const data = await getAllPodcasts();
+            setPodcasts(data.podcasts);
+        } catch (error) {
+            console.error('Failed to fetch podcasts:', error);
+        } finally {
+            setPodcastsLoading(false);
+        }
+    };
+
+    // 初始化时获取图数据和播客列表
     useEffect(() => {
         fetchGraphData();
+        fetchPodcasts();
     }, []);
 
     // 处理文件拖拽 - 调用uploadKnowledgeItem上传文件
@@ -520,30 +539,45 @@ function Home() {
             </div>
             <section className="mt-10 text-center max-w-4xl">
                 <h2 className="text-lg font-semibold mb-8">Share your thoughts and ideas with the world.</h2>
-                <div className="flex flex-col gap-4 md:grid md:grid-cols-2 md:gap-4 md:max-w-6xl md:mx-auto relative">
-                    {/* Audio Cards */}
-                    <AudioCard
-                        href="/doc/vs962a7f-9461-4875-b7c7-2f5aca66126e"
-                        title="Hacker News: Exploring Innovative Projects in Technology, Privacy, and Engineering"
-                        status="Success"
-                        date="2025/6/23"
-                        duration="9m"
-                    />
-                    <AudioCard
-                        href="/doc/vs789e71-b192-4374-93a2-8177f457ba5c"
-                        title="Hacker News: From Mechanical Watches to Technological Innovation: Latest Developments and Challenges in Multiple Fields"
-                        status="Success"
-                        date="2025/6/23"
-                        duration="5m"
-                    />
-                    <AudioCard
-                        href="/doc/vsbed589-6493-4ac2-8217-64d82b1ecafa"
-                        title="V2EX Hot List: Lychee Sales, Payment Methods, Operator Policies, and Car Rental Issues"
-                        status="Success"
-                        date="2025/6/22"
-                        duration="5m"
-                    />
-                </div>
+                {podcastsLoading ? (
+                    <div className="flex justify-center items-center py-10">
+                        <span className="loading loading-spinner loading-lg"></span>
+                    </div>
+                ) : podcasts.length > 0 ? (
+                    <div className="flex flex-col gap-4 md:grid md:grid-cols-2 md:gap-4 md:max-w-6xl md:mx-auto relative">
+                        {podcasts.map((podcast) => {
+                            const date = new Date(podcast.created_at).toLocaleDateString('en-US', {
+                                year: 'numeric',
+                                month: 'numeric',
+                                day: 'numeric'
+                            });
+                            const duration = podcast.estimated_duration 
+                                ? `${Math.floor(podcast.estimated_duration / 60)}m` 
+                                : 'N/A';
+                            
+                            // Extract UUID from knowledge_item_id (remove path prefix if exists)
+                            const cleanId = podcast.knowledge_item_id.includes('/') 
+                                ? podcast.knowledge_item_id.split('/').pop() || podcast.knowledge_item_id
+                                : podcast.knowledge_item_id;
+                            
+                            return (
+                                <AudioCard
+                                    key={podcast.podcast_id}
+                                    href={`/doc/${cleanId}`}
+                                    title={podcast.knowledge_title || 'Untitled Podcast'}
+                                    status={podcast.generation_status}
+                                    date={date}
+                                    duration={duration}
+                                    progress={podcast.progress_percentage}
+                                />
+                            );
+                        })}
+                    </div>
+                ) : (
+                    <div className="text-center py-10 text-base-content/50">
+                        No podcasts available yet. Create your first one!
+                    </div>
+                )}
             </section>
             {/* 节点详情弹窗 */}
             <NodeDetailDialog nodeDetail={nodeDetail} ref={nodeDetailModalRef} />
