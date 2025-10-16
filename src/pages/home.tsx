@@ -64,7 +64,6 @@ function Home() {
         { name: 'HOT_WORD_GENERATION', status: 'pending', icon: '🔤', message: 'Generating keywords...' },
         { name: 'EMBEDDING_GENERATION', status: 'pending', icon: '🧠', message: 'Creating embeddings...' },
         { name: 'HOT_WORD_ASSOCIATION_GENERATION', status: 'pending', icon: '🔗', message: 'Building associations...' },
-        { name: 'PODCAST_SCRIPT_GENERATION', status: 'pending', icon: '🎙️', message: 'Generating podcast script...' }
     ]);
     const [currentFileName, setCurrentFileName] = useState<string>('');
     
@@ -217,7 +216,6 @@ function Home() {
             { name: 'HOT_WORD_GENERATION', status: 'pending', icon: '🔤', message: 'Generating keywords...' },
             { name: 'EMBEDDING_GENERATION', status: 'pending', icon: '🧠', message: 'Creating embeddings...' },
             { name: 'HOT_WORD_ASSOCIATION_GENERATION', status: 'pending', icon: '🔗', message: 'Building associations...' },
-            { name: 'PODCAST_SCRIPT_GENERATION', status: 'pending', icon: '🎙️', message: 'Generating podcast script...' }
         ]);
         setCurrentFileName('');
     };
@@ -249,7 +247,6 @@ function Home() {
             { name: 'HOT_WORD_GENERATION', status: 'pending', icon: '🔤', message: 'Generating keywords...' },
             { name: 'EMBEDDING_GENERATION', status: 'pending', icon: '🧠', message: 'Creating embeddings...' },
             { name: 'HOT_WORD_ASSOCIATION_GENERATION', status: 'pending', icon: '🔗', message: 'Building associations...' },
-            { name: 'PODCAST_SCRIPT_GENERATION', status: 'pending', icon: '🎙️', message: 'Generating podcast script...' }
         ]);
         
         let newKnowledgeItemId: string | null = null;
@@ -273,10 +270,7 @@ function Home() {
                     updateStageStatus('HOT_WORD_ASSOCIATION_GENERATION', 'processing');
                 } else if (eventType === 'HOT_WORD_ASSOCIATION_GENERATION') {
                     updateStageStatus('HOT_WORD_ASSOCIATION_GENERATION', 'completed', 'Associations built');
-                    updateStageStatus('PODCAST_SCRIPT_GENERATION', 'processing');
-                } else if (eventType === 'PODCAST_SCRIPT_GENERATION') {
-                    updateStageStatus('PODCAST_SCRIPT_GENERATION', 'completed', 'Podcast script ready');
-                } else if (eventType === 'FAILED') {
+                }else if (eventType === 'FAILED') {
                     // 找到当前处理中的阶段并标记为失败
                     const currentStage = uploadStages.find(s => s.status === 'processing');
                     if (currentStage) {
