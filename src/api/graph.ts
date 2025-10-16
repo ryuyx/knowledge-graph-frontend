@@ -30,7 +30,7 @@ export const getKnowledgeGraph  = async (): Promise<GraphData> => {
     data.big_hot_words_with_hot_words.forEach((category: any) => {
         const node: Node = { id: category.id, name: category.word, type: 'category' };
         nodes.push(node);
-        nodeMap.set(category.word, node);
+        nodeMap.set(category.id, node);
     });
 
     // Add topic nodes and links from category to topic
@@ -38,10 +38,10 @@ export const getKnowledgeGraph  = async (): Promise<GraphData> => {
         const categoryName = category.word;
         category.hot_words.forEach((hotWord: any) => {
             const topic = hotWord.word;
-            if (!nodeMap.has(topic)) {
+            if (!nodeMap.has(hotWord.id)) {
                 const node: Node = { id: hotWord.id, name: topic, type: 'topic' };
                 nodes.push(node);
-                nodeMap.set(topic, node);
+                nodeMap.set(hotWord.id, node);
             }
             links.push({
                 source: category.id,
@@ -93,11 +93,13 @@ export const getKnowledgeItem = async (id: string): Promise<any> => {
 
 export const uploadKnowledgeItem = async (content: File | string, sourceType: string, onMessage: (data: any) => void) => {
     let response: Response;
+    let podcast_generation = false;
 
     if (sourceType === 'FILE') {
         const formData = new FormData();
         formData.append('file', content as File);
         formData.append('source_type', sourceType);
+        formData.append('podcast_generation', podcast_generation.toString());
         response = await fetch('/api/knowledge/collect', {
             method: 'POST',
             body: formData
@@ -108,7 +110,7 @@ export const uploadKnowledgeItem = async (content: File | string, sourceType: st
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ source_type: sourceType, url: content as string })
+            body: JSON.stringify({ source_type: sourceType, url: content as string, podcast_generation: podcast_generation })
         });
     } else {
         throw new Error('Invalid sourceType');
