@@ -9,7 +9,7 @@ const Header: React.FC = () => {
       </div>
       <div className="flex-none">
         <ul className="menu menu-horizontal px-1">
-          <li><a>Home</a></li>
+          <li><Link to="/">Home</Link></li>
           <li><a>About</a></li>
         </ul>
       </div>
