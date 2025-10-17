@@ -587,7 +587,7 @@ function Home() {
                                 </div>
                                 {response && (
                                     <div className="mt-4 p-4 bg-base-200 rounded-xl max-w-4xl">
-                                        <Markdown content={response} references={references} />
+                                        <Markdown content={response}/>
                                     </div>
                                 )}
                             </div>
@@ -613,7 +613,7 @@ function Home() {
                                 {response && (
                                     <div className="mt-4 p-4 bg-base-200 rounded-xl max-w-4xl">
                                         <h4 className="font-semibold mb-2">解析结果：</h4>
-                                        <Markdown content={response} references={references} />
+                                        <Markdown content={response}/>
                                     </div>
                                 )}
                             </div>
@@ -635,7 +635,7 @@ function Home() {
                                 {response && (
                                     <div className="mt-4 p-4 bg-base-200 rounded-xl max-w-4xl">
                                         <h4 className="font-semibold mb-2">分析结果：</h4>
-                                        <Markdown content={response} references={references} />
+                                        <Markdown content={response} />
                                     </div>
                                 )}
                             </div>

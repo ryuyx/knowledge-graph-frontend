@@ -4,117 +4,58 @@ import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import rehypeHighlight from "rehype-highlight";
-import CitationTooltip from './CitationTooltip';
 import '@/style/markdown.css';
 
-interface Reference {
-    id: string;
-    score: number;
-    document: string;
-    meta_data: {
-        source_type?: string;
-        page?: number;
-        chunk?: number;
-        created_at?: string;
-        name?: string;
-        content_id?: string;
-        hot_words?: string;
-        chunk_size?: number;
-        knowledge_item_id?: string;
-        content_hash?: string;
-    };
-    distance: number;
-    similarity: number;
-}
 
-interface MarkdownProps {
-  content: string;
-  className?: string;
-  references?: Reference[];
-}
+type MarkdownProps = {
+    content: string;
+    className?: string;
+    renderTagHover?: (chunkNumber: string) => React.ReactNode;
+    onTagClick?: (chunkNumber: string, event: React.MouseEvent<HTMLSpanElement, MouseEvent>) => void;
+};
 
-const Markdown: React.FC<MarkdownProps> = ({ content, className = "", references = [] }) => {
-    // Create a map of citation number to reference
-    const citationMap = new Map<number, Reference>();
-    
-    // Replace citations with placeholder that won't be parsed as markdown
-    const citationRegex = /\[\^(\d+)\^\]/g;
-    
-    const CITATION_PREFIX = '〖CITE:';
-    const CITATION_SUFFIX = '〗';
-    const processedContent = content.replace(citationRegex, (match, num) => {
-        const citationNum = parseInt(num, 10);
-        // Citation numbers start from 1, array indices start from 0
-        const referenceIndex = citationNum - 1;
-        if (references[referenceIndex]) {
-            citationMap.set(citationNum, references[referenceIndex]);
+const Markdown: React.FC<MarkdownProps> = ({ content, className = "", renderTagHover, onTagClick }) => {
+    // Custom tag rendering for citations like [^1^]
+    const renderTextWithTags = (text: string): React.ReactNode => {
+        if (typeof text !== 'string') return text;
+        // Skip processing if this text contains LaTeX math expressions
+        if (text.includes('$') || text.includes('\\')) {
+            return text;
         }
-        return `${CITATION_PREFIX}${num}${CITATION_SUFFIX}`;
-    });
-
-    const extractTextContent = (element: React.ReactNode): string => {
-        if (typeof element === 'string') {
-            return element;
-        }
-        if (Array.isArray(element)) {
-            return element.map(extractTextContent).join('');
-        }
-        if (element && typeof element === 'object' && 'props' in element && (element as any).props && 'children' in (element as any).props) {
-            return extractTextContent((element as any).props.children);
-        }
-        return '';
-    };
-
-    // Render text with citations
-    const renderTextWithCitations = (text: string) => {
-        if (!text || typeof text !== 'string') return text;
-        
-        const parts: (string | React.ReactNode)[] = [];
+        const tagPattern = /\[\^(\d+)\^\]/g;
+        const parts: React.ReactNode[] = [];
         let lastIndex = 0;
-        const regex = /〖CITE:(\d+)〗/g;
         let match;
-
-        while ((match = regex.exec(text)) !== null) {
-            // Add text before citation
+        while ((match = tagPattern.exec(text)) !== null) {
             if (match.index > lastIndex) {
-                parts.push(text.substring(lastIndex, match.index));
+                parts.push(text.slice(lastIndex, match.index));
             }
-
-            // Add citation
-            const citationNum = parseInt(match[1], 10);
-            const reference = citationMap.get(citationNum);
+            const chunkNumber = match[1];
+            const hoverContent = renderTagHover && renderTagHover(chunkNumber);
+            // Always render the tag span, optionally with hover and click
             parts.push(
-                <CitationTooltip
-                    key={`citation-${citationNum}-${match.index}`}
-                    citationNumber={citationNum}
-                    reference={reference}
+                <span
+                    key={`tag-${chunkNumber}-${match.index}`}
+                    className="items-center px-1 text-xs font-medium bg-primary-content text-primary rounded-full hover:cursor-pointer"
+                    onClick={onTagClick ? (e) => onTagClick(chunkNumber, e) : undefined}
                 >
-                    [{citationNum}]
-                </CitationTooltip>
+                    {chunkNumber}
+                    {hoverContent}
+                </span>
             );
-
-            lastIndex = regex.lastIndex;
+            lastIndex = match.index + match[0].length;
         }
-
-        // Add remaining text
         if (lastIndex < text.length) {
-            parts.push(text.substring(lastIndex));
+            parts.push(text.slice(lastIndex));
         }
-
-        return parts.length > 0 ? parts : text;
+        return parts.length > 1 ? parts : text;
     };
 
+    // Recursively process children to render tags
     const processChildren = (children: React.ReactNode): React.ReactNode => {
-        return React.Children.map(children, (child) => {
+        return React.Children.map(children, child => {
             if (typeof child === 'string') {
-                return renderTextWithCitations(child);
-            }
-            // @ts-ignore
-            if (React.isValidElement(child) && (child as any).props.children) {
-                return React.cloneElement(child, {
-                    ...(child as any).props,
-                    children: processChildren((child as any).props.children)
-                } as any);
+                return renderTextWithTags(child);
             }
             return child;
         });
@@ -234,7 +175,7 @@ const Markdown: React.FC<MarkdownProps> = ({ content, className = "", references
             <blockquote className="border-l-4 border-blue-500 pl-4 py-1 my-4 bg-blue-50 text-gray-600 italic">
                 {processChildren(children)}
             </blockquote>
-        )
+        ),
     };
 
     return (
@@ -251,7 +192,7 @@ const Markdown: React.FC<MarkdownProps> = ({ content, className = "", references
                 ]}
                 components={components}
             >
-                {processedContent}
+                {content}
             </ReactMarkdown>
         </div>
     );
