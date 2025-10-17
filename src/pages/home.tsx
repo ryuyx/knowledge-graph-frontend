@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import Markdown from '@/components/Markdown';
 import NodeDetailDialog from '@/components/NodeDetailDialog';
 import Graph from '@/components/Graph'
 import { getKnowledgeGraph, uploadKnowledgeItem, type GraphData as ApiGraphData } from '@/api/graph'
@@ -583,7 +584,7 @@ function Home() {
                                 </div>
                                 {response && (
                                     <div className="mt-4 p-4 bg-base-200 rounded-xl max-w-4xl">
-                                        <div className="whitespace-pre-wrap">{response}</div>
+                                        <Markdown content={response} />
                                     </div>
                                 )}
                             </div>
