@@ -225,7 +225,25 @@ const Graph = forwardRef<any, GraphProps>(({ data, width = DEFAULT_WIDTH, height
             .strength(d => (d as Node).group === 1 ? -300 : -100);
 
         const simulation = d3.forceSimulation(nodes)
-            .force("link", d3.forceLink(links).id((d: any) => d.id).distance(100)) 
+            .force("link", d3.forceLink(links)
+                .id((d: any) => d.id)
+                .distance((l: any) => {
+                    const getGroup = (n: any) => typeof n === 'object' ? n.group : nodes.find(nd => nd.id === n)?.group;
+                    const sourceGroup = getGroup(l.source);
+                    const targetGroup = getGroup(l.target);
+                    if ((sourceGroup === 2 && targetGroup === 3) || (sourceGroup === 3 && targetGroup === 2)) {
+                        return 40;
+                    }
+                    if (
+                        (sourceGroup === 1 && targetGroup === 2) ||
+                        (sourceGroup === 2 && targetGroup === 1) ||
+                        (sourceGroup === 2 && targetGroup === 2)
+                    ) {
+                        return 60;
+                    }
+                    return 100;
+                })
+            )
             .force("charge", chargeForce)
             .force("x", d3.forceX(w / 2).strength(0.05))
             .force("y", d3.forceY(h / 2).strength(0.05))
@@ -307,7 +325,7 @@ const Graph = forwardRef<any, GraphProps>(({ data, width = DEFAULT_WIDTH, height
             .data(nodes)
             .enter()
             .append("circle")
-            .attr("r", 15)
+            .attr("r", 10)
             .attr("fill", d => color(d.group.toString()))
             .style("cursor", "pointer")
             .on("click", (_, d) => handleNodeClick(d))
@@ -323,7 +341,7 @@ const Graph = forwardRef<any, GraphProps>(({ data, width = DEFAULT_WIDTH, height
             .attr("y", (d: any) => d.y + 50)
             .text((d: any) => d.name || d.id)
             .attr("text-anchor", "middle")
-            .attr("font-size", "12px")
+            .attr("font-size", "8px")
             .attr("fill", "gray");
 
         node.append("title").text((d: any) => d.id);
@@ -386,7 +404,7 @@ const Graph = forwardRef<any, GraphProps>(({ data, width = DEFAULT_WIDTH, height
             const newNodeElements = updatedNodeSelection
                 .enter()
                 .append("circle")
-                .attr("r", 15)
+                .attr("r", 10)
                 .attr("fill", d => color(d.group.toString()))
                 .attr("stroke", "none")
                 .attr("stroke-width", 0)
@@ -409,7 +427,7 @@ const Graph = forwardRef<any, GraphProps>(({ data, width = DEFAULT_WIDTH, height
                 .attr("y", (d: any) => d.y ? d.y + 25 : 25)
                 .text((d: any) => d.name || d.id)
                 .attr("text-anchor", "middle")
-                .attr("font-size", "12px")
+                .attr("font-size", "8px")
                 .attr("fill", "gray");
 
             (svgRef.current as any).__nodeSelection = updatedNodeSelection.merge(newNodeElements);
