@@ -32,6 +32,7 @@ function Home() {
     const [linkUrl, setLinkUrl] = useState('')
     const [longText, setLongText] = useState('')
     const [response, setResponse] = useState('')
+    const [references, setReferences] = useState<any[]>([])
     // Chat textarea ref for auto-focus
     const chatTextareaRef = useRef<HTMLTextAreaElement | null>(null)
 
@@ -96,6 +97,7 @@ function Home() {
         }
         if (!currentInput.trim()) return;
         setResponse('');
+        setReferences([]);
         setIsLoading(true);
         try {
             await chat(currentInput, (data: any) => {
@@ -103,6 +105,7 @@ function Home() {
                     setResponse(prev => prev + data.content);
                 } else if (data.event === 'RunReferences') {
                     if (Array.isArray(data.references)) {
+                        setReferences(data.references);
                         const highlightIds = data.references.map((item: any) => item.meta_data?.knowledge_item_id).filter(Boolean);
                         if (graphRef.current && typeof graphRef.current.setNodesHighlighted === 'function') {
                             graphRef.current.setNodesHighlighted(highlightIds, true);
@@ -584,7 +587,7 @@ function Home() {
                                 </div>
                                 {response && (
                                     <div className="mt-4 p-4 bg-base-200 rounded-xl max-w-4xl">
-                                        <Markdown content={response} />
+                                        <Markdown content={response} references={references} />
                                     </div>
                                 )}
                             </div>
@@ -610,7 +613,7 @@ function Home() {
                                 {response && (
                                     <div className="mt-4 p-4 bg-base-200 rounded-xl max-w-4xl">
                                         <h4 className="font-semibold mb-2">解析结果：</h4>
-                                        <div className="whitespace-pre-wrap">{response}</div>
+                                        <Markdown content={response} references={references} />
                                     </div>
                                 )}
                             </div>
@@ -632,7 +635,7 @@ function Home() {
                                 {response && (
                                     <div className="mt-4 p-4 bg-base-200 rounded-xl max-w-4xl">
                                         <h4 className="font-semibold mb-2">分析结果：</h4>
-                                        <div className="whitespace-pre-wrap">{response}</div>
+                                        <Markdown content={response} references={references} />
                                     </div>
                                 )}
                             </div>
