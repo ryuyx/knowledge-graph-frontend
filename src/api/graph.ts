@@ -105,12 +105,12 @@ export const uploadKnowledgeItem = async (content: File | string, sourceType: st
             body: formData
         });
     } else if (sourceType === 'URL') {
+        const formData = new FormData();
+        formData.append('source_type', sourceType);
+        formData.append('url', content as string);
         response = await fetch('/api/knowledge/collect', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ source_type: sourceType, url: content as string, podcast_generation: podcast_generation })
+            body: formData
         });
     } else {
         throw new Error('Invalid sourceType');

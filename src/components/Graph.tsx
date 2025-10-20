@@ -162,10 +162,16 @@ const Graph = forwardRef<any, GraphProps>(({ data, width = DEFAULT_WIDTH, height
                 gEl.transition().duration(500)
                     .attr('transform', newTransform.toString())
                     .on('end', () => {
-                        d3.select(svgEl).call(
-                            (svg as any).__zoom.transform,
-                            newTransform
-                        );
+                        // Ensure we have a stored zoom behavior and its transform method before calling
+                        const svgSelection = d3.select(svgEl);
+                        const storedZoom = (svgRef.current as any)?.__zoom;
+                        if (storedZoom && typeof storedZoom.transform === 'function') {
+                            // Prefer calling the zoom behavior's transform via svg.call
+                            svgSelection.call((storedZoom as any).transform, newTransform);
+                        } else {
+                            // Fallback: directly set the group transform if zoom behavior isn't present
+                            svgSelection.select('g').attr('transform', newTransform.toString());
+                        }
                     });
             }
         }

@@ -26,6 +26,8 @@ interface Data {
 }
 
 function Home() {
+    // Import API helpers lazily at top of component scope to avoid SSR issues
+    // (real import is added at file top via patch below)
     // Tag click handler: highlight node in graph
     const handleTagClick = (chunkNumber: string) => {
         const index = parseInt(chunkNumber) - 1;
@@ -116,21 +118,73 @@ function Home() {
         setReferences([]);
         setIsLoading(true);
         try {
-            await chat(currentInput, (data: any) => {
-                if (data.event === 'RunContent') {
-                    setResponse(prev => prev + data.content);
-                } else if (data.event === 'RunReferences') {
-                    if (Array.isArray(data.references)) {
-                        setReferences(data.references);
-                        const highlightIds = data.references.map((item: any) => item.meta_data?.knowledge_item_id).filter(Boolean);
-                        if (graphRef.current && typeof graphRef.current.setNodesHighlighted === 'function') {
-                            graphRef.current.setNodesHighlighted(highlightIds, true);
+            if (activeTab === 'Link') {
+                // Use uploadKnowledgeItem for URL source to reuse SSE processing used for files
+                // update stages to start
+                setUploadStages([
+                    { name: 'TEXT_EXTRACTION', status: 'processing', icon: '📄', message: 'Extracting text from URL...' },
+                    { name: 'HOT_WORD_GENERATION', status: 'pending', icon: '🔤', message: 'Generating keywords...' },
+                    { name: 'EMBEDDING_GENERATION', status: 'pending', icon: '🧠', message: 'Creating embeddings...' },
+                    { name: 'HOT_WORD_ASSOCIATION_GENERATION', status: 'pending', icon: '🔗', message: 'Building associations...' },
+                ]);
+
+                // uploadKnowledgeItem emits SSE-like messages; import from api/graph
+                await uploadKnowledgeItem(currentInput, 'URL', (data: any) => {
+                    const eventType = data.type || data.event;
+                    if (eventType === 'TEXT_EXTRACTION') {
+                        updateStageStatus('TEXT_EXTRACTION', 'completed', 'Text extracted from URL');
+                        updateStageStatus('HOT_WORD_GENERATION', 'processing');
+                        if (data.data?.knowledge_item_id) {
+                            setCurrentFileName(String(data.data.knowledge_item_id));
+                        }
+                    } else if (eventType === 'HOT_WORD_GENERATION') {
+                        updateStageStatus('HOT_WORD_GENERATION', 'completed', `Generated ${data.data?.length || 0} keywords`);
+                        updateStageStatus('EMBEDDING_GENERATION', 'processing');
+                    } else if (eventType === 'EMBEDDING_GENERATION') {
+                        updateStageStatus('EMBEDDING_GENERATION', 'completed', 'Embeddings created');
+                        updateStageStatus('HOT_WORD_ASSOCIATION_GENERATION', 'processing');
+                    } else if (eventType === 'HOT_WORD_ASSOCIATION_GENERATION') {
+                        updateStageStatus('HOT_WORD_ASSOCIATION_GENERATION', 'completed', 'Associations built');
+                    } else if (eventType === 'RunContent' || eventType === 'CHAT_CONTENT') {
+                        // Some backends may send generated content chunks
+                        if (data.content) setResponse(prev => prev + data.content);
+                    } else if (eventType === 'RunReferences' || eventType === 'REFERENCES') {
+                        if (Array.isArray(data.references)) {
+                            setReferences(data.references);
+                            const highlightIds = data.references.map((item: any) => item.meta_data?.knowledge_item_id).filter(Boolean);
+                            if (graphRef.current && typeof graphRef.current.setNodesHighlighted === 'function') {
+                                graphRef.current.setNodesHighlighted(highlightIds, true);
+                            }
+                        }
+                    } else if (eventType === 'FAILED') {
+                        const currentStage = uploadStages.find(s => s.status === 'processing');
+                        if (currentStage) {
+                            updateStageStatus(currentStage.name, 'failed', data.data?.error || 'Processing failed');
                         }
                     }
-                }
-            });
+                });
+
+                // refresh graph data after processing
+                await fetchGraphData();
+                setResponse(prev => prev + '\n✅ URL successfully processed and added to graph!');
+            } else {
+                // existing chat flow (Chat / Long Text)
+                await chat(currentInput, (data: any) => {
+                    if (data.event === 'RunContent') {
+                        setResponse(prev => prev + data.content);
+                    } else if (data.event === 'RunReferences') {
+                        if (Array.isArray(data.references)) {
+                            setReferences(data.references);
+                            const highlightIds = data.references.map((item: any) => item.meta_data?.knowledge_item_id).filter(Boolean);
+                            if (graphRef.current && typeof graphRef.current.setNodesHighlighted === 'function') {
+                                graphRef.current.setNodesHighlighted(highlightIds, true);
+                            }
+                        }
+                    }
+                });
+            }
         } catch (error) {
-            console.error('Failed to send chat:', error);
+            console.error('Failed to send chat or upload link:', error);
             setResponse('发送失败，请重试。');
         } finally {
             setIsLoading(false);
@@ -412,7 +466,7 @@ function Home() {
                 <div className="my-5">
                     <div className="relative group">
                         {/* Chat Attachments/Context Bar */}
-                        <div className="mb-2 w-full">
+                        {/* <div className="mb-2 w-full">
                             <div className="flex items-center gap-2 flex-wrap">
                                 {selectedNodes.map((node) => (
                                     <div
@@ -441,7 +495,7 @@ function Home() {
                                     </div>
                                 ))}
                             </div>
-                        </div>
+                        </div> */}
                         {activeTab === 'Upload File' ? (
                             <>
                                 {console.log('✅ Rendering Upload File tab content')}
