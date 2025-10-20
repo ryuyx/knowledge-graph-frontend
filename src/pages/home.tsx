@@ -252,7 +252,7 @@ function Home() {
                     group: node.type === 'category' ? 1
                             : node.type === 'topic' ? 2
                             : node.type === 'FILE' ? 3
-                            : node.type === 'LINK' ? 4
+                            : node.type === 'URL' ? 4
                             : 0,
                     ...node
                 })),

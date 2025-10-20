@@ -217,7 +217,15 @@ const Graph = forwardRef<any, GraphProps>(({ data, width = DEFAULT_WIDTH, height
         setInternalSelectedNodeIds([]);
         onNodesSelect?.([]);
 
-        const color = d3.scaleOrdinal(d3.schemeSet3);
+        // Define per-group visual styles so different node kinds render consistently.
+        const groupStyles: Record<number, { fill: string; stroke?: string; r: number; textSize?: string; textOffset?: number }> = {
+            1: { fill: "#ef7234", stroke: "#fff", r: 14, textSize: "12px", textOffset: 34 }, // category
+            2: { fill: "#76b7b2", stroke: "none", r: 10, textSize: "9px", textOffset: 28 }, // topic
+            3: { fill: "#3c3c43", stroke: "none", r: 8, textSize: "8px", textOffset: 24 }, // FILE
+            4: { fill: "#1f77b4", stroke: "none", r: 8, textSize: "8px", textOffset: 24 }, // URL
+        };
+        // Backwards-compatible color accessor for places that previously used a d3 scale
+        const color = (g: any) => groupStyles[Number(g)]?.fill ?? d3.schemeSet3[0];
         const links = data.links.map(d => ({ ...d }));
         const nodes = data.nodes.map(d => ({ ...d }));
 
@@ -253,7 +261,8 @@ const Graph = forwardRef<any, GraphProps>(({ data, width = DEFAULT_WIDTH, height
             .force("charge", chargeForce)
             .force("x", d3.forceX(w / 2).strength(0.05))
             .force("y", d3.forceY(h / 2).strength(0.05))
-            .force("collision", d3.forceCollide(20))
+            // adjust collision radius based on node radius for each group
+            .force("collision", d3.forceCollide().radius((d: any) => ((groupStyles[d.group]?.r ?? 10) + 6)))
             .on("tick", ticked);
 
         simulationRef.current = simulation;
@@ -331,8 +340,10 @@ const Graph = forwardRef<any, GraphProps>(({ data, width = DEFAULT_WIDTH, height
             .data(nodes)
             .enter()
             .append("circle")
-            .attr("r", 10)
-            .attr("fill", d => color(d.group.toString()))
+            .attr("r", d => (groupStyles[d.group]?.r ?? 10))
+            .attr("fill", d => (groupStyles[d.group]?.fill ?? "#ddd"))
+            .attr("stroke", d => (groupStyles[d.group]?.stroke ?? "none"))
+            .attr("stroke-width", d => (groupStyles[d.group]?.stroke ? 2 : 0))
             .style("cursor", "pointer")
             .on("click", (_, d) => handleNodeClick(d))
             .on("contextmenu", (event, d) => handleNodeRightClick(event, d))
@@ -344,10 +355,10 @@ const Graph = forwardRef<any, GraphProps>(({ data, width = DEFAULT_WIDTH, height
             .enter()
             .append("text")
             .attr("x", (d: any) => d.x)
-            .attr("y", (d: any) => d.y + 50)
+            .attr("y", (d: any) => (d.y ?? 0) + (groupStyles[d.group]?.textOffset ?? 25))
             .text((d: any) => d.name || d.id)
             .attr("text-anchor", "middle")
-            .attr("font-size", "8px")
+            .attr("font-size", (d: any) => groupStyles[d.group]?.textSize ?? "8px")
             .attr("fill", "gray");
 
         node.append("title").text((d: any) => d.id);
@@ -395,10 +406,11 @@ const Graph = forwardRef<any, GraphProps>(({ data, width = DEFAULT_WIDTH, height
         }
 
         // Store references
-        (svgRef.current as any).__nodeSelection = node;
-        (svgRef.current as any).__colorScale = color;
-        (svgRef.current as any).__textSelection = text;
-        (svgRef.current as any).__gSelection = g;
+    (svgRef.current as any).__nodeSelection = node;
+    // store groupStyles so other parts can reference consistent styling
+    (svgRef.current as any).__colorScale = groupStyles;
+    (svgRef.current as any).__textSelection = text;
+    (svgRef.current as any).__gSelection = g;
 
         // Simplified addNodeDynamically function
         const addNodeDynamically = (newNode: Node) => {
@@ -410,10 +422,10 @@ const Graph = forwardRef<any, GraphProps>(({ data, width = DEFAULT_WIDTH, height
             const newNodeElements = updatedNodeSelection
                 .enter()
                 .append("circle")
-                .attr("r", 10)
-                .attr("fill", d => color(d.group.toString()))
-                .attr("stroke", "none")
-                .attr("stroke-width", 0)
+                .attr("r", d => (groupStyles[d.group]?.r ?? 10))
+                .attr("fill", d => (groupStyles[d.group]?.fill ?? "#ddd"))
+                .attr("stroke", d => (groupStyles[d.group]?.stroke ?? "none"))
+                .attr("stroke-width", d => (groupStyles[d.group]?.stroke ? 2 : 0))
                 .style("cursor", "pointer")
                 .on("click", (_, d) => handleNodeClick(d))
                 .on("contextmenu", (event, d) => handleNodeRightClick(event, d))
@@ -430,10 +442,10 @@ const Graph = forwardRef<any, GraphProps>(({ data, width = DEFAULT_WIDTH, height
                 .enter()
                 .append("text")
                 .attr("x", (d: any) => d.x || 0)
-                .attr("y", (d: any) => d.y ? d.y + 25 : 25)
+                .attr("y", (d: any) => (d.y ? d.y + (groupStyles[d.group]?.textOffset ?? 25) : (groupStyles[d.group]?.textOffset ?? 25)))
                 .text((d: any) => d.name || d.id)
                 .attr("text-anchor", "middle")
-                .attr("font-size", "8px")
+                .attr("font-size", (d: any) => groupStyles[d.group]?.textSize ?? "8px")
                 .attr("fill", "gray");
 
             (svgRef.current as any).__nodeSelection = updatedNodeSelection.merge(newNodeElements);
@@ -455,20 +467,37 @@ const Graph = forwardRef<any, GraphProps>(({ data, width = DEFAULT_WIDTH, height
         const svg = svgRef.current;
         if (!svg) return;
         const node = (svg as any).__nodeSelection as d3.Selection<SVGCircleElement, Node, any, any>;
-        const color = (svg as any).__colorScale as d3.ScaleOrdinal<string, string>;
-        if (!node || !color) return;
+        const colorOrStyles = (svg as any).__colorScale;
+        if (!node || !colorOrStyles) return;
+
         node.transition().duration(300)
-            .attr("fill", d => color(d.group.toString()))
+            .attr("fill", d => {
+                // support either a d3 scale function or our groupStyles object
+                if (typeof colorOrStyles === 'function') {
+                    try { return colorOrStyles(d.group.toString()); } catch { /* fallthrough */ }
+                }
+                if (typeof colorOrStyles === 'object') {
+                    return colorOrStyles[d.group]?.fill ?? "#ddd";
+                }
+                return "#ddd";
+            })
             .attr("stroke", d => {
                 if (d.highlighted) return "#ff9800";
                 if (internalSelectedNodeIds.includes(d.id)) return 'black';
                 if (rightSelectedNode && rightSelectedNode.id === d.id) return '#007bff';
+                // fallback to groupStyles stroke if available
+                if (typeof colorOrStyles === 'object') {
+                    return colorOrStyles[d.group]?.stroke ?? "none";
+                }
                 return "none";
             })
             .attr("stroke-width", d => {
                 if (d.highlighted) return 5;
                 if (internalSelectedNodeIds.includes(d.id)) return 3;
                 if (rightSelectedNode && rightSelectedNode.id === d.id) return 3;
+                if (typeof colorOrStyles === 'object') {
+                    return colorOrStyles[d.group]?.stroke ? 2 : 0;
+                }
                 return 0;
             })
             .attr("stroke-dasharray", d => {
