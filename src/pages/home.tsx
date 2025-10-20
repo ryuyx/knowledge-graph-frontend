@@ -26,6 +26,22 @@ interface Data {
 }
 
 function Home() {
+    // Tag click handler: highlight node in graph
+    const handleTagClick = (chunkNumber: string) => {
+        const index = parseInt(chunkNumber) - 1;
+        const ref = references[index];
+        const highlightId = ref?.meta_data?.knowledge_item_id || chunkNumber;
+        if (graphData && graphRef.current && typeof graphRef.current.setNodesHighlighted === 'function') {
+            // Find node by id
+            const node = graphData.nodes.find(
+                n => n.id === highlightId
+            );
+            if (node) {
+                graphRef.current.setNodesHighlighted([node.id]);
+            }
+        }
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
     const [activeTab, setActiveTab] = useState('Chat')
     // 分离不同tab的输入内容
     const [chatMessage, setChatMessage] = useState('')
@@ -587,7 +603,7 @@ function Home() {
                                 </div>
                                 {response && (
                                     <div className="mt-4 p-4 bg-base-200 rounded-xl max-w-4xl">
-                                        <Markdown content={response}/>
+                                        <Markdown content={response} onTagClick={handleTagClick}/>
                                     </div>
                                 )}
                             </div>
