@@ -215,7 +215,7 @@ function Home() {
             } catch (error) {
                 setNodeDetail({ error: '获取 topic 详情失败' });
             }
-        } else if (node && (node.type === 'FILE' || node.type === 'LINK')) {
+        } else if (node && (node.type === 'FILE' || node.type === 'URL')) {
             try {
                 const detail = await getKnowledgeItem(node.id);
                 setNodeDetail(detail);
@@ -436,11 +436,29 @@ function Home() {
                         <h1 className="text-4xl font-bold">Build Your Knowledge!</h1>
                         <p className="py-6">
                             Find something you're interested in and share it.<br /><br />
-                            <span className="text-base-content/50">1. Select to ask something about it.</span><br />
+                            {/* Legend for node styles (hard-coded) */}
+                            <div className="grid grid-cols-2 gap-x-6 gap-y-2 items-start mb-2">
+                                <div className="flex items-center gap-3">
+                                    <span aria-hidden className="inline-block w-5 h-5 rounded-full" style={{ backgroundColor: '#ef7234'}}></span>
+                                    <span style={{ fontSize: '12px' }} className="text-base-content/80">category</span>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <span aria-hidden className="inline-block w-5 h-5 rounded-full" style={{ backgroundColor: '#76b7b2' }}></span>
+                                    <span style={{ fontSize: '12px' }} className="text-base-content/80">topic</span>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <span aria-hidden className="inline-block w-5 h-5 rounded-full" style={{ backgroundColor: '#3c3c43' }}></span>
+                                    <span style={{ fontSize: '12px' }} className="text-base-content/80">file</span>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <span aria-hidden className="inline-block w-5 h-5 rounded-full" style={{ backgroundColor: '#1f77b4' }}></span>
+                                    <span style={{ fontSize: '12px' }} className="text-base-content/80">url</span>
+                                </div>
+                            </div>
+                            <span className="text-base-content/50">1. Ask something about document.</span><br />
                             <span className="text-base-content/50">2. Double-click to show the details.</span><br />
-                            <span className="text-base-content/50">3. Choose to create and share a podcast.</span><br />
-                            <span className="text-base-content/50">4. Right click to connect nodes.</span><br />
-                            <span className="text-base-content/50">5. Drag and drop files into the graph to add new nodes.</span>
+                            <span className="text-base-content/50">3. Drag and drop files into the graph to build.</span><br />
+                            <span className="text-base-content/50">4. Click<span className="items-center mx-1 px-1 text-xs font-medium bg-primary-content text-primary rounded-full ">1</span> to focus the reference.</span><br />
                         </p>
                     </div>
                 </div>

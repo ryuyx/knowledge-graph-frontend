@@ -219,8 +219,8 @@ const Graph = forwardRef<any, GraphProps>(({ data, width = DEFAULT_WIDTH, height
 
         // Define per-group visual styles so different node kinds render consistently.
         const groupStyles: Record<number, { fill: string; stroke?: string; r: number; textSize?: string; textOffset?: number }> = {
-            1: { fill: "#ef7234", stroke: "#fff", r: 14, textSize: "12px", textOffset: 34 }, // category
-            2: { fill: "#76b7b2", stroke: "none", r: 10, textSize: "9px", textOffset: 28 }, // topic
+            1: { fill: "#ef7234", stroke: "none", r: 14, textSize: "12px", textOffset: 34 }, // category
+            2: { fill: "#76b7b2", stroke: "none", r: 10, textSize: "10px", textOffset: 28 }, // topic
             3: { fill: "#3c3c43", stroke: "none", r: 8, textSize: "8px", textOffset: 24 }, // FILE
             4: { fill: "#1f77b4", stroke: "none", r: 8, textSize: "8px", textOffset: 24 }, // URL
         };
