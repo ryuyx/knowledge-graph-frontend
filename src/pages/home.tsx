@@ -461,8 +461,8 @@ function Home() {
                                             <svg className="w-16 h-16 text-primary mb-4 animate-bounce" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                                                 <path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                                             </svg>
-                                            <div className="text-lg font-semibold text-primary mb-2">松开鼠标上传文件</div>
-                                            <div className="text-sm text-base-content/70">支持拖拽或点击上传文件</div>
+                                            <div className="text-lg font-semibold text-primary mb-2">Release mouse to upload file</div>
+                                            <div className="text-sm text-base-content/70">Supports drag and drop or click to upload file</div>
                                         </>
                                     ) : (
                                         <>
@@ -472,7 +472,7 @@ function Home() {
                                                     <path strokeLinecap="round" strokeLinejoin="round" d="M7 10l5 5 5-5" />
                                                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 15V3" />
                                                 </svg>
-                                                选择文件上传
+                                                Select file to upload
                                             </label>
                                             <input
                                                 id="file-upload"
@@ -486,8 +486,8 @@ function Home() {
                                                 }}
                                             />
                                             <div className="text-center">
-                                                <div className="text-base-content/70 mb-1">或者将文件拖拽到此处</div>
-                                                <div className="text-xs text-base-content/50">支持所有文件类型</div>
+                                                <div className="text-base-content/70 mb-1">Or drag and drop the file here</div>
+                                                <div className="text-xs text-base-content/50">Supports all file types</div>
                                             </div>
                                         </>
                                     )}
@@ -624,11 +624,11 @@ function Home() {
                                     </div>
                                 </div>
                                 <div className="text-sm text-base-content/70 px-2">
-                                    支持网页链接、视频链接、文档链接等各种URL
+                                    Supports web links, video links, document links, and various URLs.
                                 </div>
                                 {response && (
                                     <div className="mt-4 p-4 bg-base-200 rounded-xl max-w-4xl">
-                                        <h4 className="font-semibold mb-2">解析结果：</h4>
+                                        <h4 className="font-semibold mb-2">Parsing result:</h4>
                                         <Markdown content={response}/>
                                     </div>
                                 )}
@@ -646,11 +646,11 @@ function Home() {
                                     {longText.length} characters
                                 </div>
                                 <div className="mt-2 text-sm text-base-content/70 px-2">
-                                    支持文章、论文、报告等长文本内容
+                                    Supports articles, papers, reports, and other long text content.
                                 </div>
                                 {response && (
                                     <div className="mt-4 p-4 bg-base-200 rounded-xl max-w-4xl">
-                                        <h4 className="font-semibold mb-2">分析结果：</h4>
+                                        <h4 className="font-semibold mb-2">Analysis result:</h4>
                                         <Markdown content={response} />
                                     </div>
                                 )}
@@ -666,8 +666,6 @@ function Home() {
                         <div className="flex flex-wrap gap-3 items-center">
 
                         </div>
-
-
                         {/* Inline actions: Create button + external link */}
                         <div className="flex items-center gap-4">
                             {activeTab === 'Upload File' ? null : (
@@ -755,7 +753,6 @@ function Home() {
                     </div>
                 )}
             </section>
-            {/* 节点详情弹窗 */}
             <NodeDetailDialog nodeDetail={nodeDetail} ref={nodeDetailModalRef} />
         </div>
     )
