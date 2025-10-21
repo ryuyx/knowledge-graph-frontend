@@ -444,7 +444,7 @@ function Home() {
                                 </div>
                                 <div className="flex items-center gap-3">
                                     <span aria-hidden className="inline-block w-5 h-5 rounded-full" style={{ backgroundColor: '#76b7b2' }}></span>
-                                    <span style={{ fontSize: '12px' }} className="text-base-content/80">topic</span>
+                                    <span style={{ fontSize: '12px' }} className="text-base-content/80">keyword / topic</span>
                                 </div>
                                 <div className="flex items-center gap-3">
                                     <span aria-hidden className="inline-block w-5 h-5 rounded-full" style={{ backgroundColor: '#3c3c43' }}></span>

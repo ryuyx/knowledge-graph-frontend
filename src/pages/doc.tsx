@@ -9,6 +9,7 @@ import rehypeKatex from 'rehype-katex'
 import rehypeHighlight from 'rehype-highlight'
 import 'highlight.js/styles/github.css'
 import 'katex/dist/katex.min.css'
+import Markdown from '@/components/Markdown'
 
 function Doc() {
   const { id } = useParams()
@@ -186,7 +187,7 @@ function Doc() {
                     <h1 className="text-2xl font-bold mb-4">Source Content</h1>
                     <div className="prose prose-sm max-w-none">
                       <p className="text-base-content/70 whitespace-pre-wrap">
-                        {knowledgeItem.source_content || 'No source content available'}
+                        <Markdown content={knowledgeItem.extracted_text || 'No source text available'} />
                       </p>
                     </div>
                   </article>
