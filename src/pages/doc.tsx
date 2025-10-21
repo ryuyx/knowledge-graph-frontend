@@ -69,7 +69,7 @@ function Doc() {
       {/* 顶部卡片区域 */}
   <div className="w-full max-w-3xl bg-base-100 rounded-xl shadow-lg p-6 flex flex-col gap-6 mb-6">
         <div className="flex gap-6 items-center">
-          <img src="/vite.svg" alt="Podcast" className="w-32 h-32 object-cover rounded-xl" />
+          <img src="/yamaha-prd.png" alt="Podcast" className="w-32 h-32 object-cover rounded-xl" />
           <div className="flex-1">
             <h2 className="text-2xl font-bold mb-2 text-primary">{knowledgeItem.title || 'Untitled Podcast'}</h2>
             <p className="mb-2 text-base-content line-clamp-2">
