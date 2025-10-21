@@ -18,7 +18,7 @@ export interface GraphData {
     links: Link[];
 }
 
-export const getKnowledgeGraph  = async (): Promise<GraphData> => {
+export const getKnowledgeGraph = async (): Promise<GraphData> => {
     const response = await apiClient.get('/knowledge/cluster');
     const data = response.data;
 
@@ -51,19 +51,19 @@ export const getKnowledgeGraph  = async (): Promise<GraphData> => {
 
             // Add knowledge items as nodes and link them to topics
             hotWord.knowledge_items?.forEach((item: any) => {
-                const itemName = item.item_metadata.original_filename||item.title || item.source_content;
+                const itemName = item.item_metadata.original_filename || item.title || item.source_content;
                 const itemId = item.id;
-                
+
                 if (!nodeMap.has(itemId)) {
-                    const node: Node = { 
+                    const node: Node = {
                         id: itemId,
-                        name: itemName, 
-                        type: item.source_type 
+                        name: itemName,
+                        type: item.source_type
                     };
                     nodes.push(node);
                     nodeMap.set(itemId, node);
                 }
-                
+
                 // Link topic to knowledge item
                 links.push({
                     source: hotWord.id,
@@ -89,7 +89,7 @@ export const getKnowledgeGraph  = async (): Promise<GraphData> => {
 export const getKnowledgeItem = async (id: string): Promise<any> => {
     const response = await apiClient.get(`/knowledge/${id}`);
     return response.data;
-}   
+}
 
 export const uploadKnowledgeItem = async (content: File | string, sourceType: string, onMessage: (data: any) => void, podcast_generation: boolean = false) => {
     let response: Response;
@@ -107,6 +107,15 @@ export const uploadKnowledgeItem = async (content: File | string, sourceType: st
         const formData = new FormData();
         formData.append('source_type', sourceType);
         formData.append('url', content as string);
+        formData.append('podcast_generation', podcast_generation.toString());
+        response = await fetch('/api/knowledge/collect', {
+            method: 'POST',
+            body: formData
+        });
+    } else if (sourceType === 'TEXT') {
+        const formData = new FormData();
+        formData.append('source_type', sourceType);
+        formData.append('text_content', content as string);
         formData.append('podcast_generation', podcast_generation.toString());
         response = await fetch('/api/knowledge/collect', {
             method: 'POST',

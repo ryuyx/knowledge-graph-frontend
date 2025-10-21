@@ -16,32 +16,32 @@ const AudioCard: React.FC<AudioCardProps> = ({ href, title, status, date, durati
     switch (upperStatus) {
       case 'COMPLETED':
         return {
-          badge: 'bg-gradient-to-r from-green-100/80 to-emerald-100/60 text-green-700',
-          icon: 'bg-gradient-to-br from-green-400/90 to-emerald-400/90',
+          badge: 'bg-gradient-to-r from-primary/20 to-primary/20 text-primary',
+          icon: 'bg-gradient-to-br from-primary/90 to-primary/70',
           label: 'Completed'
         };
       case 'GENERATING':
         return {
-          badge: 'bg-gradient-to-r from-blue-100/80 to-cyan-100/60 text-blue-700',
-          icon: 'bg-gradient-to-br from-blue-400/90 to-cyan-400/90',
+          badge: 'bg-gradient-to-r from-primary/20 to-primary/20 text-primary',
+          icon: 'bg-gradient-to-br from-primary/90 to-primary/70',
           label: 'Generating'
         };
       case 'PENDING':
         return {
-          badge: 'bg-gradient-to-r from-yellow-100/80 to-amber-100/60 text-yellow-700',
-          icon: 'bg-gradient-to-br from-yellow-400/90 to-amber-400/90',
+          badge: 'bg-gradient-to-r from-primary/20 to-primary/20 text-primary',
+          icon: 'bg-gradient-to-br from-primary/90 to-primary/70',
           label: 'Pending'
         };
       case 'FAILED':
         return {
-          badge: 'bg-gradient-to-r from-red-100/80 to-rose-100/60 text-red-700',
-          icon: 'bg-gradient-to-br from-red-400/90 to-rose-400/90',
+          badge: 'bg-gradient-to-r from-primary/20 to-primary/20 text-primary',
+          icon: 'bg-gradient-to-br from-primary/90 to-primary/70',
           label: 'Failed'
         };
       default:
         return {
-          badge: 'bg-gradient-to-r from-gray-100/80 to-slate-100/60 text-gray-700',
-          icon: 'bg-gradient-to-br from-gray-400/90 to-slate-400/90',
+          badge: 'bg-gradient-to-r from-primary/20 to-primary/20 text-primary',
+          icon: 'bg-gradient-to-br from-primary/90 to-primary/70',
           label: status
         };
     }
@@ -80,14 +80,14 @@ const AudioCard: React.FC<AudioCardProps> = ({ href, title, status, date, durati
         </div>
         <div className="flex-1 min-w-0 text-left">
           <a href={href}>
-            <h3 className="card-title text-lg font-semibold text-gray-900 mb-1 truncate">{title}</h3>
+            <h3 className="card-title text-lg font-semibold text-base-content mb-1 truncate">{title}</h3>
           </a>
           <div className="mt-2 flex items-center gap-2 flex-wrap">
             <span className={`px-2 py-1 text-xs font-medium rounded-lg ${statusStyle.badge}`}>
               {statusStyle.label}
             </span>
-            <span className="text-xs text-gray-500">{date}</span>
-            <span className="px-2 py-1 text-xs font-medium bg-gradient-to-r from-emerald-100/80 to-teal-100/60 rounded-lg text-emerald-600">{duration}</span>
+            <span className="text-xs text-base-content/60">{date}</span>
+            <span className="px-2 py-1 text-xs font-medium bg-primary/20 rounded-lg text-primary">{duration}</span>
           </div>
           {/* 进度条 - 仅在 GENERATING 状态显示 */}
           {showProgress && (

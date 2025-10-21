@@ -55,3 +55,17 @@ export const getPodcastDetails = async (knowledgeItemId: string): Promise<Podcas
     return response.data;
 };
 
+export const shareKnowledge = async (
+    knowledgeItemId: string,
+    options: { user_ids?: string[]; generate_audio?: boolean; add_intro?: boolean; send_card?: boolean } = {}
+): Promise<PodcastDetails> => {
+    const payload = {
+        user_ids: options.user_ids ?? [],
+        generate_audio: options.generate_audio ?? false,
+        add_intro: options.add_intro ?? false,
+        send_card: options.send_card ?? true,
+    };
+
+    const response = await apiClient.post(`/share/knowledge/${knowledgeItemId}`, payload);
+    return response.data;
+};

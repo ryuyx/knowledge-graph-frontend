@@ -1,6 +1,6 @@
 import { useParams } from 'react-router-dom'
-import { useState, useEffect } from 'react'
-import { getPodcastDetails, getPodcastAudioUrl, type PodcastDetails } from '@/api/podcast'
+import { useState, useEffect, useRef } from 'react'
+import { getPodcastDetails, getPodcastAudioUrl, shareKnowledge, type PodcastDetails } from '@/api/podcast'
 import { getKnowledgeItem } from '@/api/graph'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -10,6 +10,7 @@ import rehypeHighlight from 'rehype-highlight'
 import 'highlight.js/styles/github.css'
 import 'katex/dist/katex.min.css'
 import Markdown from '@/components/Markdown'
+import ShareDialog from '@/components/ShareDialog'
 
 function Doc() {
   const { id } = useParams()
@@ -17,6 +18,8 @@ function Doc() {
   const [knowledgeItem, setKnowledgeItem] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [shareLoading, setShareLoading] = useState(false)
+  const shareModalRef = useRef<HTMLDialogElement | null>(null)
 
   useEffect(() => {
     const fetchData = async () => {
@@ -47,6 +50,32 @@ function Doc() {
 
     fetchData();
   }, [id]);
+
+  const handleShareClick = () => {
+    if (shareModalRef.current) {
+      shareModalRef.current.showModal();
+    }
+  };
+
+  const handleShare = async (userIds: string[], options: { generate_audio?: boolean; add_intro?: boolean; send_card?: boolean }) => {
+    if (!id) return;
+    
+    setShareLoading(true);
+    try {
+      const cleanId = id.includes('/') ? id.split('/').pop() || id : id;
+      await shareKnowledge(cleanId, {
+        user_ids: userIds,
+        generate_audio: options.generate_audio,
+        add_intro: options.add_intro,
+        send_card: options.send_card
+      });
+    } catch (err) {
+      console.error('分享失败:', err);
+      alert('分享失败，请重试');
+    } finally {
+      setShareLoading(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -86,7 +115,25 @@ function Doc() {
         </div>
         {/* 分享按钮区 - 固定在卡片底部 */}
         <div className="flex gap-2 justify-end">
-          <button className="btn btn-primary">Share</button>
+          <button 
+            className="btn btn-primary"
+            onClick={handleShareClick}
+            disabled={shareLoading}
+          >
+            {shareLoading ? (
+              <>
+                <span className="loading loading-spinner loading-xs"></span>
+                分享中...
+              </>
+            ) : (
+              <>
+                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z" />
+                </svg>
+                Share
+              </>
+            )}
+          </button>
         </div>
       </div>
 
@@ -184,7 +231,6 @@ function Doc() {
                 <div className="tab-content border-base-300 bg-base-100 p-6">
                   {/* 原始内容 */}
                   <article className="max-w-xl mx-auto py-6">
-                    <h1 className="text-2xl font-bold mb-4">Source Content</h1>
                     <div className="prose prose-sm max-w-none">
                       <p className="text-base-content/70 whitespace-pre-wrap">
                         <Markdown content={knowledgeItem.extracted_text || 'No source text available'} />
@@ -194,6 +240,12 @@ function Doc() {
                 </div>
             </div>
           </div>
+          
+          {/* 分享对话框 */}
+          <ShareDialog 
+            ref={shareModalRef}
+            onShare={handleShare}
+          />
       </div>
   )
 }
