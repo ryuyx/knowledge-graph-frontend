@@ -167,8 +167,55 @@ function Home() {
                 // refresh graph data after processing
                 await fetchGraphData();
                 setResponse(prev => prev + '\n✅ URL successfully processed and added to graph!');
+            } else if (activeTab === 'Long Text') {
+                // Use uploadKnowledgeItem for TEXT source similar to URL processing
+                setUploadStages([
+                    { name: 'TEXT_EXTRACTION', status: 'processing', icon: '📄', message: 'Processing text content...' },
+                    { name: 'HOT_WORD_GENERATION', status: 'pending', icon: '🔤', message: 'Generating keywords...' },
+                    { name: 'EMBEDDING_GENERATION', status: 'pending', icon: '🧠', message: 'Creating embeddings...' },
+                    { name: 'HOT_WORD_ASSOCIATION_GENERATION', status: 'pending', icon: '🔗', message: 'Building associations...' },
+                ]);
+
+                await uploadKnowledgeItem(currentInput, 'TEXT', (data: any) => {
+                    const eventType = data.type || data.event;
+                    if (eventType === 'TEXT_EXTRACTION') {
+                        updateStageStatus('TEXT_EXTRACTION', 'completed', 'Text processed successfully');
+                        updateStageStatus('HOT_WORD_GENERATION', 'processing');
+                        if (data.data?.knowledge_item_id) {
+                            setCurrentFileName(String(data.data.knowledge_item_id));
+                        }
+                    } else if (eventType === 'HOT_WORD_GENERATION') {
+                        updateStageStatus('HOT_WORD_GENERATION', 'completed', `Generated ${data.data?.length || 0} keywords`);
+                        updateStageStatus('EMBEDDING_GENERATION', 'processing');
+                    } else if (eventType === 'EMBEDDING_GENERATION') {
+                        updateStageStatus('EMBEDDING_GENERATION', 'completed', 'Embeddings created');
+                        updateStageStatus('HOT_WORD_ASSOCIATION_GENERATION', 'processing');
+                    } else if (eventType === 'HOT_WORD_ASSOCIATION_GENERATION') {
+                        updateStageStatus('HOT_WORD_ASSOCIATION_GENERATION', 'completed', 'Associations built');
+                    } else if (eventType === 'RunContent' || eventType === 'CHAT_CONTENT') {
+                        // Some backends may send generated content chunks
+                        if (data.content) setResponse(prev => prev + data.content);
+                    } else if (eventType === 'RunReferences' || eventType === 'REFERENCES') {
+                        if (Array.isArray(data.references)) {
+                            setReferences(data.references);
+                            const highlightIds = data.references.map((item: any) => item.meta_data?.knowledge_item_id).filter(Boolean);
+                            if (graphRef.current && typeof graphRef.current.setNodesHighlighted === 'function') {
+                                graphRef.current.setNodesHighlighted(highlightIds, true);
+                            }
+                        }
+                    } else if (eventType === 'FAILED') {
+                        const currentStage = uploadStages.find(s => s.status === 'processing');
+                        if (currentStage) {
+                            updateStageStatus(currentStage.name, 'failed', data.data?.error || 'Processing failed');
+                        }
+                    }
+                }, isPodcast);
+
+                // refresh graph data after processing
+                await fetchGraphData();
+                setResponse(prev => prev + '\n✅ Text successfully analyzed and added to graph!');
             } else {
-                // existing chat flow (Chat / Long Text)
+                // existing chat flow (Chat only)
                 await chat(currentInput, (data: any) => {
                     if (data.event === 'RunContent') {
                         setResponse(prev => prev + data.content);
@@ -184,10 +231,24 @@ function Home() {
                 });
             }
         } catch (error) {
-            console.error('Failed to send chat or upload link:', error);
-            setResponse('发送失败，请重试。');
+            console.error('Failed to send chat, upload link, or process text:', error);
+            setResponse('处理失败，请重试。');
+            // 标记所有处理中的阶段为失败
+            if (activeTab === 'Link' || activeTab === 'Long Text') {
+                setUploadStages(prev => prev.map(stage => 
+                    stage.status === 'processing' ? { ...stage, status: 'failed' as const } : stage
+                ));
+            }
         } finally {
             setIsLoading(false);
+            // 为Link和Long Text tab重置进度显示
+            if (activeTab === 'Link' || activeTab === 'Long Text') {
+                setTimeout(() => {
+                    if (!isLoading) {
+                        resetUploadStages();
+                    }
+                }, 5000);
+            }
         }
     }
 
@@ -215,7 +276,7 @@ function Home() {
             } catch (error) {
                 setNodeDetail({ error: '获取 topic 详情失败' });
             }
-        } else if (node && (node.type === 'FILE' || node.type === 'URL')) {
+        } else if (node && (node.type === 'FILE' || node.type === 'URL'|| node.type === 'TEXT')) {
             try {
                 const detail = await getKnowledgeItem(node.id);
                 setNodeDetail(detail);
@@ -698,10 +759,65 @@ function Home() {
                                 <div className="text-sm text-base-content/70 px-2">
                                     Supports web links, video links, document links, and various URLs.
                                 </div>
-                                {response && (
-                                    <div className="mt-4 p-4 bg-base-200 rounded-xl max-w-4xl">
+                                
+                                {/* Upload Progress Display for Link */}
+                                {(isLoading || currentFileName) && (
+                                    <div className="mt-6 p-6 bg-gradient-to-br from-base-200 to-base-100 rounded-2xl shadow-lg border border-base-300">
+                                        <div className="flex items-center gap-3 mb-4">
+                                            <div className="w-3 h-3 bg-primary rounded-full animate-pulse"></div>
+                                            <h3 className="text-lg font-semibold text-base-content">
+                                                Processing URL Content
+                                            </h3>
+                                        </div>
+                                        
+                                        <div className="space-y-4">
+                                            {uploadStages.map((stage) => (
+                                                <div key={stage.name} className="flex items-center gap-4 p-3 rounded-xl bg-base-100/50">
+                                                    <div className="flex-shrink-0">
+                                                        {stage.status === 'completed' ? (
+                                                            <div className="w-8 h-8 bg-success text-success-content rounded-full flex items-center justify-center text-sm font-bold">
+                                                                ✓
+                                                            </div>
+                                                        ) : stage.status === 'processing' ? (
+                                                            <div className="w-8 h-8 bg-primary text-primary-content rounded-full flex items-center justify-center">
+                                                                <span className="loading loading-spinner loading-xs"></span>
+                                                            </div>
+                                                        ) : stage.status === 'failed' ? (
+                                                            <div className="w-8 h-8 bg-error text-error-content rounded-full flex items-center justify-center text-sm font-bold">
+                                                                ✗
+                                                            </div>
+                                                        ) : (
+                                                            <div className="w-8 h-8 bg-base-300 text-base-content/40 rounded-full flex items-center justify-center text-lg">
+                                                                {stage.icon}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    <div className="flex-1">
+                                                        <div className="font-medium text-base-content">
+                                                            {stage.message}
+                                                        </div>
+                                                        {stage.status === 'processing' && (
+                                                            <div className="mt-2">
+                                                                <div className="w-full bg-base-300 rounded-full h-2">
+                                                                    <div className="bg-primary h-2 rounded-full animate-pulse" style={{width: '60%'}}></div>
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                                
+                                {response && !isLoading && (
+                                    <div className={`mt-4 p-4 rounded-xl ${
+                                        response.includes('✅') ? 'bg-success/10 border border-success/20' : 
+                                        response.includes('❌') ? 'bg-error/10 border border-error/20' : 
+                                        'bg-base-200'
+                                    }`}>
                                         <h4 className="font-semibold mb-2">Parsing result:</h4>
-                                        <Markdown content={response}/>
+                                        <Markdown content={response} onTagClick={handleTagClick}/>
                                     </div>
                                 )}
                             </div>
@@ -720,10 +836,65 @@ function Home() {
                                 <div className="mt-2 text-sm text-base-content/70 px-2">
                                     Supports articles, papers, reports, and other long text content.
                                 </div>
-                                {response && (
-                                    <div className="mt-4 p-4 bg-base-200 rounded-xl max-w-4xl">
+                                
+                                {/* Upload Progress Display for Long Text */}
+                                {(isLoading || currentFileName) && (
+                                    <div className="mt-6 p-6 bg-gradient-to-br from-base-200 to-base-100 rounded-2xl shadow-lg border border-base-300">
+                                        <div className="flex items-center gap-3 mb-4">
+                                            <div className="w-3 h-3 bg-primary rounded-full animate-pulse"></div>
+                                            <h3 className="text-lg font-semibold text-base-content">
+                                                Processing Text Content
+                                            </h3>
+                                        </div>
+                                        
+                                        <div className="space-y-4">
+                                            {uploadStages.map((stage) => (
+                                                <div key={stage.name} className="flex items-center gap-4 p-3 rounded-xl bg-base-100/50">
+                                                    <div className="flex-shrink-0">
+                                                        {stage.status === 'completed' ? (
+                                                            <div className="w-8 h-8 bg-success text-success-content rounded-full flex items-center justify-center text-sm font-bold">
+                                                                ✓
+                                                            </div>
+                                                        ) : stage.status === 'processing' ? (
+                                                            <div className="w-8 h-8 bg-primary text-primary-content rounded-full flex items-center justify-center">
+                                                                <span className="loading loading-spinner loading-xs"></span>
+                                                            </div>
+                                                        ) : stage.status === 'failed' ? (
+                                                            <div className="w-8 h-8 bg-error text-error-content rounded-full flex items-center justify-center text-sm font-bold">
+                                                                ✗
+                                                            </div>
+                                                        ) : (
+                                                            <div className="w-8 h-8 bg-base-300 text-base-content/40 rounded-full flex items-center justify-center text-lg">
+                                                                {stage.icon}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    <div className="flex-1">
+                                                        <div className="font-medium text-base-content">
+                                                            {stage.message}
+                                                        </div>
+                                                        {stage.status === 'processing' && (
+                                                            <div className="mt-2">
+                                                                <div className="w-full bg-base-300 rounded-full h-2">
+                                                                    <div className="bg-primary h-2 rounded-full animate-pulse" style={{width: '60%'}}></div>
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                                
+                                {response && !isLoading && (
+                                    <div className={`mt-4 p-4 rounded-xl ${
+                                        response.includes('✅') ? 'bg-success/10 border border-success/20' : 
+                                        response.includes('❌') ? 'bg-error/10 border border-error/20' : 
+                                        'bg-base-200'
+                                    }`}>
                                         <h4 className="font-semibold mb-2">Analysis result:</h4>
-                                        <Markdown content={response} />
+                                        <Markdown content={response} onTagClick={handleTagClick} />
                                     </div>
                                 )}
                             </div>
