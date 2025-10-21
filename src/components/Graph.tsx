@@ -113,15 +113,18 @@ const Graph = forwardRef<any, GraphProps>(({ data, width = DEFAULT_WIDTH, height
         onNodeDoubleClick?.(d);
     }, [onNodeDoubleClick]);
 
-    // 批量设置节点高亮状态
     const setNodesHighlighted = (ids: string[], highlighted: boolean) => {
         nodesDataRef.current.forEach(node => {
-            if (ids.includes(node.id)) {
-                node.highlighted = highlighted;
-            }
+            node.highlighted = false;
         });
-        setHighlightedNodeIds(ids);
-        // 触发d3样式更新
+        if (highlighted) {
+            nodesDataRef.current.forEach(node => {
+                if (ids.includes(node.id)) {
+                    node.highlighted = true;
+                }
+            });
+        }
+        setHighlightedNodeIds(highlighted ? ids : []);
         const svg = svgRef.current;
         if (!svg) return;
         const nodeSel = (svg as any).__nodeSelection as d3.Selection<SVGCircleElement, Node, any, any>;
@@ -253,9 +256,9 @@ const Graph = forwardRef<any, GraphProps>(({ data, width = DEFAULT_WIDTH, height
                         (sourceGroup === 2 && targetGroup === 1) ||
                         (sourceGroup === 2 && targetGroup === 2)
                     ) {
-                        return 60;
+                        return 80;
                     }
-                    return 100;
+                    return 120;
                 })
             )
             .force("charge", chargeForce)

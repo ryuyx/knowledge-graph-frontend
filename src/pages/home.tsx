@@ -39,7 +39,7 @@ function Home() {
                 n => n.id === highlightId
             );
             if (node) {
-                graphRef.current.setNodesHighlighted([node.id]);
+                graphRef.current.setNodesHighlighted([node.id], true);
             }
         }
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -98,7 +98,7 @@ function Home() {
         { name: 'Long Text', icon: '📄' }
     ]
 
-    const handleCreatePodcast = async () => {
+    const handleUploadKnowledge = async (isPodcast: boolean = false) => {
         let currentInput = '';
         switch(activeTab) {
             case 'Chat':
@@ -162,7 +162,7 @@ function Home() {
                             updateStageStatus(currentStage.name, 'failed', data.data?.error || 'Processing failed');
                         }
                     }
-                });
+                }, isPodcast);
 
                 // refresh graph data after processing
                 await fetchGraphData();
@@ -409,7 +409,7 @@ function Home() {
         if (activeTab === 'Chat' && e.key === 'Enter') {
             e.preventDefault();
             if (chatMessage.trim() && !isLoading) {
-                handleCreatePodcast();
+                handleUploadKnowledge();
             }
         }
     };
@@ -657,7 +657,7 @@ function Home() {
                                         aria-label="Chat message input"
                                     />
                                     <button
-                                        onClick={handleCreatePodcast}
+                                        onClick={() => handleUploadKnowledge(false)}
                                         disabled={!chatMessage.trim() || isLoading}
                                         className="btn btn-soft btn-primary btn-circle absolute bottom-4 right-4 z-10 flex items-center justify-center disabled:cursor-not-allowed"
                                         style={{ width: '42px', height: '42px', minWidth: '42px', minHeight: '42px' }}
@@ -746,7 +746,7 @@ function Home() {
                                     {activeTab === 'Link' || activeTab === 'Long Text' ? (
                                         <>
                                             <button
-                                                onClick={handleCreatePodcast}
+                                                onClick={() => handleUploadKnowledge(false)}
                                                 disabled={
                                                     activeTab === 'Link' ? !linkUrl.trim() || isLoading : 
                                                     activeTab === 'Long Text' ? !longText.trim() || isLoading : true
@@ -761,7 +761,7 @@ function Home() {
                                                 </span>
                                             </button>
                                             <button
-                                                onClick={handleCreatePodcast}
+                                                onClick={() => handleUploadKnowledge(true)}
                                                 disabled={
                                                     activeTab === 'Link' ? !linkUrl.trim() || isLoading : 
                                                     activeTab === 'Long Text' ? !longText.trim() || isLoading : true

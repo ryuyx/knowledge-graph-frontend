@@ -91,9 +91,8 @@ export const getKnowledgeItem = async (id: string): Promise<any> => {
     return response.data;
 }   
 
-export const uploadKnowledgeItem = async (content: File | string, sourceType: string, onMessage: (data: any) => void) => {
+export const uploadKnowledgeItem = async (content: File | string, sourceType: string, onMessage: (data: any) => void, podcast_generation: boolean = false) => {
     let response: Response;
-    let podcast_generation = false;
 
     if (sourceType === 'FILE') {
         const formData = new FormData();
@@ -108,6 +107,7 @@ export const uploadKnowledgeItem = async (content: File | string, sourceType: st
         const formData = new FormData();
         formData.append('source_type', sourceType);
         formData.append('url', content as string);
+        formData.append('podcast_generation', podcast_generation.toString());
         response = await fetch('/api/knowledge/collect', {
             method: 'POST',
             body: formData

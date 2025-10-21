@@ -96,7 +96,7 @@ function Doc() {
             <div className="tabs tabs-lift w-full">
                 {podcastDetails.mind_map && (
                   <>
-                    <input type="radio" name="doc_tabs_group" className="tab" aria-label="Outline" />
+                    <input type="radio" name="doc_tabs_group" className="tab" aria-label="Outline" defaultChecked />
                     <div className="tab-content border-base-300 bg-base-100 p-6">
                       {/* Mind Map Content - Rendered with Markdown */}
                       <div className="w-full prose prose-slate max-w-none">
@@ -132,7 +132,7 @@ function Doc() {
                   </>
                 )}
 
-                <input type="radio" name="doc_tabs_group" className="tab" aria-label="Script" defaultChecked />
+                <input type="radio" name="doc_tabs_group" className="tab" aria-label="Script" />
                 <div className="tab-content border-base-300 bg-base-100 p-6">
                   {/* 访谈内容区 - 优化布局 */}
                   <div className="w-full flex flex-col gap-4">
