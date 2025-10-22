@@ -1,5 +1,8 @@
-import React, { useRef, useEffect, useState, forwardRef, useImperativeHandle } from 'react';
+import React, { useRef, useEffect, useState, forwardRef, useImperativeHandle, useMemo } from 'react';
 import * as d3 from 'd3';
+import GraphToolbar from './GraphToolbar';
+import { loadConfig, saveConfig, getDefaultConfig } from '@/utils/graphConfig';
+import type { Node as NodeType, Link as LinkType, GraphData, ToolbarConfig } from '@/types/graph';
 
 interface Node {
     id: string;
@@ -46,6 +49,9 @@ const Graph = forwardRef<any, GraphProps>(({ data, width = DEFAULT_WIDTH, height
     const simulationRef = useRef<d3.Simulation<Node, Link> | null>(null);
     const nodesDataRef = useRef<Node[]>([]);
     const linksDataRef = useRef<Link[]>([]);
+    
+    // Toolbar configuration state
+    const [toolbarConfig, setToolbarConfig] = useState<ToolbarConfig>(() => loadConfig());
 
 
     // Consolidated event handlers with useCallback
@@ -213,6 +219,28 @@ const Graph = forwardRef<any, GraphProps>(({ data, width = DEFAULT_WIDTH, height
         };
     }, []);
 
+    // Check if a node should be visible based on filter configuration
+    const isNodeVisible = React.useCallback((node: Node) => {
+        // Name filter
+        if (toolbarConfig.nameFilter && !node.name.toLowerCase().includes(toolbarConfig.nameFilter.toLowerCase())) {
+            return false;
+        }
+        
+        // Type filter
+        if (!toolbarConfig.typeFilter.includes(node.group)) {
+            return false;
+        }
+        
+        // Level filter
+        if (toolbarConfig.levelFilter !== 'all') {
+            if (toolbarConfig.levelFilter === 'category' && node.group !== 1) return false;
+            if (toolbarConfig.levelFilter === 'topic' && node.group !== 2) return false;
+            if (toolbarConfig.levelFilter === 'file' && (node.group !== 3 && node.group !== 4)) return false;
+        }
+        
+        return true;
+    }, [toolbarConfig.nameFilter, toolbarConfig.typeFilter, toolbarConfig.levelFilter]);
+
     useEffect(() => {
         if (!svgRef.current) return;
 
@@ -239,7 +267,10 @@ const Graph = forwardRef<any, GraphProps>(({ data, width = DEFAULT_WIDTH, height
         const h = typeof height === 'number' ? height : DEFAULT_HEIGHT;
 
         const chargeForce = d3.forceManyBody()
-            .strength(d => (d as Node).group === 1 ? -300 : -100);
+            .strength(d => {
+                const baseStrength = (d as Node).group === 1 ? -300 : -100;
+                return baseStrength * toolbarConfig.chargeStrength;
+            });
 
         const simulation = d3.forceSimulation(nodes)
             .force("link", d3.forceLink(links)
@@ -248,24 +279,24 @@ const Graph = forwardRef<any, GraphProps>(({ data, width = DEFAULT_WIDTH, height
                     const getGroup = (n: any) => typeof n === 'object' ? n.group : nodes.find(nd => nd.id === n)?.group;
                     const sourceGroup = getGroup(l.source);
                     const targetGroup = getGroup(l.target);
+                    let baseDistance = 120;
                     if ((sourceGroup === 2 && targetGroup === 3) || (sourceGroup === 3 && targetGroup === 2)) {
-                        return 40;
-                    }
-                    if (
+                        baseDistance = 40;
+                    } else if (
                         (sourceGroup === 1 && targetGroup === 2) ||
                         (sourceGroup === 2 && targetGroup === 1) ||
                         (sourceGroup === 2 && targetGroup === 2)
                     ) {
-                        return 80;
+                        baseDistance = 80;
                     }
-                    return 120;
+                    return baseDistance * toolbarConfig.linkDistance;
                 })
             )
             .force("charge", chargeForce)
-            .force("x", d3.forceX(w / 2).strength(0.05))
-            .force("y", d3.forceY(h / 2).strength(0.05))
+            .force("x", d3.forceX(w / 2).strength(toolbarConfig.centerForce))
+            .force("y", d3.forceY(h / 2).strength(toolbarConfig.centerForce))
             // adjust collision radius based on node radius for each group
-            .force("collision", d3.forceCollide().radius((d: any) => ((groupStyles[d.group]?.r ?? 10) + 6)))
+            .force("collision", d3.forceCollide().radius((d: any) => ((groupStyles[d.group]?.r ?? 10) * toolbarConfig.nodeSize + 6)))
             .on("tick", ticked);
 
         simulationRef.current = simulation;
@@ -331,20 +362,31 @@ const Graph = forwardRef<any, GraphProps>(({ data, width = DEFAULT_WIDTH, height
 
         const link = g.append("g")
             .attr("stroke", "#999")
-            .attr("stroke-opacity", 0.6)
             .selectAll("line")
             .data(links)
             .enter()
             .append("line")
-            .attr("stroke-width", 1.5);
+            .attr("stroke-width", toolbarConfig.linkWidth)
+            .style("opacity", (l: any) => {
+                const source = typeof l.source === 'object' ? l.source : nodes.find(n => n.id === l.source);
+                const target = typeof l.target === 'object' ? l.target : nodes.find(n => n.id === l.target);
+                return (source && target && isNodeVisible(source) && isNodeVisible(target)) ? 0.6 : 0;
+            })
+            .style("pointer-events", (l: any) => {
+                const source = typeof l.source === 'object' ? l.source : nodes.find(n => n.id === l.source);
+                const target = typeof l.target === 'object' ? l.target : nodes.find(n => n.id === l.target);
+                return (source && target && isNodeVisible(source) && isNodeVisible(target)) ? "auto" : "none";
+            });
 
         const node = g.append("g")
             .selectAll("circle")
             .data(nodes)
             .enter()
             .append("circle")
-            .attr("r", d => (groupStyles[d.group]?.r ?? 10))
+            .attr("r", d => (groupStyles[d.group]?.r ?? 10) * toolbarConfig.nodeSize)
             .attr("fill", d => (groupStyles[d.group]?.fill ?? "#ddd"))
+            .style("opacity", d => isNodeVisible(d) ? toolbarConfig.nodeOpacity : 0)
+            .style("pointer-events", d => isNodeVisible(d) ? "auto" : "none")
             .attr("stroke", d => (groupStyles[d.group]?.stroke ?? "none"))
             .attr("stroke-width", d => (groupStyles[d.group]?.stroke ? 2 : 0))
             .style("cursor", "pointer")
@@ -358,11 +400,18 @@ const Graph = forwardRef<any, GraphProps>(({ data, width = DEFAULT_WIDTH, height
             .enter()
             .append("text")
             .attr("x", (d: any) => d.x)
-            .attr("y", (d: any) => (d.y ?? 0) + (groupStyles[d.group]?.textOffset ?? 25))
+            .attr("y", (d: any) => (d.y ?? 0) + (groupStyles[d.group]?.textOffset ?? 25) * toolbarConfig.textSize)
             .text((d: any) => d.name || d.id)
             .attr("text-anchor", "middle")
-            .attr("font-size", (d: any) => groupStyles[d.group]?.textSize ?? "8px")
-            .attr("fill", "gray");
+            .attr("font-size", (d: any) => {
+                const baseSize = parseInt(groupStyles[d.group]?.textSize ?? "8px");
+                return `${baseSize * toolbarConfig.textSize}px`;
+            })
+            .attr("fill", "gray")
+            .style("opacity", d => isNodeVisible(d) ? 1 : 0)
+            .style("display", (d: any) => {
+                return toolbarConfig.textLevelDisplay.includes(d.group) ? 'block' : 'none';
+            });
 
         node.append("title").text((d: any) => d.id);
 
@@ -425,8 +474,10 @@ const Graph = forwardRef<any, GraphProps>(({ data, width = DEFAULT_WIDTH, height
             const newNodeElements = updatedNodeSelection
                 .enter()
                 .append("circle")
-                .attr("r", d => (groupStyles[d.group]?.r ?? 10))
+                .attr("r", d => (groupStyles[d.group]?.r ?? 10) * toolbarConfig.nodeSize)
                 .attr("fill", d => (groupStyles[d.group]?.fill ?? "#ddd"))
+                .style("opacity", d => isNodeVisible(d) ? toolbarConfig.nodeOpacity : 0)
+                .style("pointer-events", d => isNodeVisible(d) ? "auto" : "none")
                 .attr("stroke", d => (groupStyles[d.group]?.stroke ?? "none"))
                 .attr("stroke-width", d => (groupStyles[d.group]?.stroke ? 2 : 0))
                 .style("cursor", "pointer")
@@ -445,11 +496,18 @@ const Graph = forwardRef<any, GraphProps>(({ data, width = DEFAULT_WIDTH, height
                 .enter()
                 .append("text")
                 .attr("x", (d: any) => d.x || 0)
-                .attr("y", (d: any) => (d.y ? d.y + (groupStyles[d.group]?.textOffset ?? 25) : (groupStyles[d.group]?.textOffset ?? 25)))
+                .attr("y", (d: any) => (d.y ? d.y + (groupStyles[d.group]?.textOffset ?? 25) * toolbarConfig.textSize : (groupStyles[d.group]?.textOffset ?? 25) * toolbarConfig.textSize))
                 .text((d: any) => d.name || d.id)
                 .attr("text-anchor", "middle")
-                .attr("font-size", (d: any) => groupStyles[d.group]?.textSize ?? "8px")
-                .attr("fill", "gray");
+                .attr("font-size", (d: any) => {
+                    const baseSize = parseInt(groupStyles[d.group]?.textSize ?? "8px");
+                    return `${baseSize * toolbarConfig.textSize}px`;
+                })
+                .attr("fill", "gray")
+                .style("opacity", d => isNodeVisible(d) ? 1 : 0)
+                .style("display", (d: any) => {
+                    return toolbarConfig.textLevelDisplay.includes(d.group) ? 'block' : 'none';
+                });
 
             (svgRef.current as any).__nodeSelection = updatedNodeSelection.merge(newNodeElements);
             (svgRef.current as any).__textSelection = updatedTextSelection.merge(newTextElements);
@@ -460,11 +518,150 @@ const Graph = forwardRef<any, GraphProps>(({ data, width = DEFAULT_WIDTH, height
         return () => {
             simulation.stop();
         };
-    }, [data, width, height]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [
+        data, 
+        width, 
+        height
+    ]);
 
     useEffect(() => {
         setInternalSelectedNodeIds(selectedNodeIds);
     }, [selectedNodeIds]);
+
+    // Apply filters by dynamically showing/hiding nodes without re-rendering
+    useEffect(() => {
+        const svg = svgRef.current;
+        if (!svg) return;
+        
+        const node = (svg as any).__nodeSelection as d3.Selection<SVGCircleElement, any, any, any>;
+        const text = (svg as any).__textSelection as d3.Selection<SVGTextElement, any, any, any>;
+        const linkGroup = d3.select(svg).select('g').select('g');
+        
+        if (!node || !text) return;
+        
+        // Update node visibility with transition
+        node.transition().duration(200)
+            .style("opacity", (d: any) => isNodeVisible(d) ? toolbarConfig.nodeOpacity : 0)
+            .style("pointer-events", (d: any) => isNodeVisible(d) ? "auto" : "none");
+        
+        // Update text visibility
+        text.transition().duration(200)
+            .style("opacity", (d: any) => isNodeVisible(d) ? 1 : 0);
+        
+        // Update link visibility - only show links where both ends are visible
+        if (linkGroup) {
+            linkGroup.selectAll('line')
+                .transition().duration(200)
+                .style("opacity", (l: any) => {
+                    const source = typeof l.source === 'object' ? l.source : nodesDataRef.current.find(n => n.id === l.source);
+                    const target = typeof l.target === 'object' ? l.target : nodesDataRef.current.find(n => n.id === l.target);
+                    return (source && target && isNodeVisible(source) && isNodeVisible(target)) ? 0.6 : 0;
+                })
+                .style("pointer-events", (l: any) => {
+                    const source = typeof l.source === 'object' ? l.source : nodesDataRef.current.find(n => n.id === l.source);
+                    const target = typeof l.target === 'object' ? l.target : nodesDataRef.current.find(n => n.id === l.target);
+                    return (source && target && isNodeVisible(source) && isNodeVisible(target)) ? "auto" : "none";
+                });
+        }
+    }, [toolbarConfig.nameFilter, toolbarConfig.typeFilter, toolbarConfig.levelFilter, toolbarConfig.nodeOpacity, isNodeVisible]);
+
+    // Update physics parameters without re-rendering the entire graph
+    useEffect(() => {
+        if (!simulationRef.current) return;
+        
+        const simulation = simulationRef.current;
+        const w = typeof width === 'number' ? width : DEFAULT_WIDTH;
+        const h = typeof height === 'number' ? height : DEFAULT_HEIGHT;
+        
+        // Update forces
+        simulation
+            .force("x", d3.forceX(w / 2).strength(toolbarConfig.centerForce))
+            .force("y", d3.forceY(h / 2).strength(toolbarConfig.centerForce))
+            .force("charge", d3.forceManyBody().strength(d => {
+                const baseStrength = (d as any).group === 1 ? -300 : -100;
+                return baseStrength * toolbarConfig.chargeStrength;
+            }))
+            .force("collision", d3.forceCollide().radius((d: any) => {
+                const svg = svgRef.current;
+                const groupStyles = (svg as any)?.__colorScale;
+                return ((groupStyles?.[d.group]?.r ?? 10) * toolbarConfig.nodeSize + 6);
+            }));
+        
+        // Update link distances
+        const linkForce = simulation.force("link") as d3.ForceLink<any, any>;
+        if (linkForce) {
+            linkForce.distance((l: any) => {
+                const nodes = nodesDataRef.current;
+                const getGroup = (n: any) => typeof n === 'object' ? n.group : nodes.find(nd => nd.id === n)?.group;
+                const sourceGroup = getGroup(l.source);
+                const targetGroup = getGroup(l.target);
+                let baseDistance = 120;
+                if ((sourceGroup === 2 && targetGroup === 3) || (sourceGroup === 3 && targetGroup === 2)) {
+                    baseDistance = 40;
+                } else if (
+                    (sourceGroup === 1 && targetGroup === 2) ||
+                    (sourceGroup === 2 && targetGroup === 1) ||
+                    (sourceGroup === 2 && targetGroup === 2)
+                ) {
+                    baseDistance = 80;
+                }
+                return baseDistance * toolbarConfig.linkDistance;
+            });
+        }
+        
+        // Restart simulation with lower alpha to avoid too much movement
+        simulation.alpha(0.1).restart();
+    }, [toolbarConfig.centerForce, toolbarConfig.chargeStrength, toolbarConfig.linkDistance, toolbarConfig.nodeSize, width, height]);
+
+    // Update visual properties without re-rendering the entire graph
+    useEffect(() => {
+        const svg = svgRef.current;
+        if (!svg) return;
+        
+        const node = (svg as any).__nodeSelection as d3.Selection<SVGCircleElement, any, any, any>;
+        const text = (svg as any).__textSelection as d3.Selection<SVGTextElement, any, any, any>;
+        const groupStyles = (svg as any).__colorScale;
+        const linkGroup = d3.select(svg).select('g').select('g');
+        
+        if (node) {
+            node.transition().duration(200)
+                .attr("r", d => (groupStyles?.[d.group]?.r ?? 10) * toolbarConfig.nodeSize);
+            
+            // Apply opacity separately to respect filter state
+            node.each(function(_d: any) {
+                const currentOpacity = parseFloat(d3.select(this).style("opacity"));
+                if (currentOpacity > 0) { // Only update if node is visible
+                    d3.select(this).transition().duration(200)
+                        .style("opacity", toolbarConfig.nodeOpacity);
+                }
+            });
+        }
+        
+        if (text) {
+            text.transition().duration(200)
+                .attr("font-size", (d: any) => {
+                    const baseSize = parseInt(groupStyles?.[d.group]?.textSize ?? "8px");
+                    return `${baseSize * toolbarConfig.textSize}px`;
+                })
+                .attr("y", (d: any) => d.y + (groupStyles?.[d.group]?.textOffset ?? 25) * toolbarConfig.textSize)
+                .style("display", (d: any) => {
+                    return toolbarConfig.textLevelDisplay.includes(d.group) ? 'block' : 'none';
+                });
+        }
+        
+        if (linkGroup) {
+            linkGroup.selectAll('line')
+                .transition().duration(200)
+                .attr("stroke-width", toolbarConfig.linkWidth);
+        }
+    }, [
+        toolbarConfig.nodeSize, 
+        toolbarConfig.textSize, 
+        toolbarConfig.nodeOpacity, 
+        toolbarConfig.textLevelDisplay, 
+        toolbarConfig.linkWidth
+    ]);
 
     useEffect(() => {
         const svg = svgRef.current;
@@ -540,6 +737,20 @@ const Graph = forwardRef<any, GraphProps>(({ data, width = DEFAULT_WIDTH, height
                     </svg>
                 )}
             </button>
+
+            {/* Graph Toolbar */}
+            <GraphToolbar
+                config={toolbarConfig}
+                onConfigChange={(newConfig) => {
+                    setToolbarConfig(newConfig);
+                    saveConfig(newConfig);
+                }}
+                onReset={() => {
+                    const defaultConfig = getDefaultConfig();
+                    setToolbarConfig(defaultConfig);
+                    saveConfig(defaultConfig);
+                }}
+            />
             
             <svg
                 ref={svgRef}
