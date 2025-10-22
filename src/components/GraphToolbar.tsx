@@ -5,18 +5,35 @@ interface GraphToolbarProps {
   config: ToolbarConfig;
   onConfigChange: (config: ToolbarConfig) => void;
   onReset: () => void;
+  containerRef?: React.RefObject<HTMLDivElement | null>;
 }
 
-const GraphToolbar: React.FC<GraphToolbarProps> = ({ config, onConfigChange, onReset }) => {
+const GraphToolbar: React.FC<GraphToolbarProps> = ({ config, onConfigChange, onReset, containerRef }) => {
   const [isExpanded, setIsExpanded] = useState(false);
-  const [position, setPosition] = useState({ x: 20, y: 80 });
+  const [position, setPosition] = useState({ x: 20, y: 20 });
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const [initialPositionSet, setInitialPositionSet] = useState(false);
   
   // Collapsible sections state
   const [filterExpanded, setFilterExpanded] = useState(false);
   const [visualExpanded, setVisualExpanded] = useState(false);
   const [physicsExpanded, setPhysicsExpanded] = useState(false);
+
+  // Calculate initial position relative to container when expanded
+  useEffect(() => {
+    if (isExpanded && !initialPositionSet && containerRef?.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      setPosition({
+        x: rect.left + 20,
+        y: rect.top + 20,
+      });
+      setInitialPositionSet(true);
+    }
+    if (!isExpanded) {
+      setInitialPositionSet(false);
+    }
+  }, [isExpanded, containerRef, initialPositionSet]);
 
   const handleMouseDown = (e: React.MouseEvent) => {
     setIsDragging(true);
@@ -29,8 +46,9 @@ const GraphToolbar: React.FC<GraphToolbarProps> = ({ config, onConfigChange, onR
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (isDragging) {
-        const newX = Math.max(0, Math.min(window.innerWidth - 320, e.clientX - dragOffset.x));
-        const newY = Math.max(0, Math.min(window.innerHeight - 100, e.clientY - dragOffset.y));
+        // Allow dragging anywhere on the screen without restrictions
+        const newX = e.clientX - dragOffset.x;
+        const newY = e.clientY - dragOffset.y;
         setPosition({ x: newX, y: newY });
       }
     };
@@ -54,37 +72,28 @@ const GraphToolbar: React.FC<GraphToolbarProps> = ({ config, onConfigChange, onR
 
   if (!isExpanded) {
     return (
-      <div
+      <button
+        onClick={() => setIsExpanded(true)}
+        className="btn btn-circle btn-sm absolute z-50 shadow-lg hover:scale-110 transition-transform"
+        title="Open Toolbar"
+        aria-label="Open Toolbar"
         style={{
           position: 'absolute',
-          left: `${position.x}px`,
-          top: `${position.y}px`,
-          zIndex: 1000,
+          right: '8px',
+          top: '52px',
         }}
-        className="bg-base-100/95 backdrop-blur-md rounded-lg shadow-2xl border border-base-300"
       >
-        <div
-          className="p-3 cursor-move flex items-center gap-2"
-          onMouseDown={handleMouseDown}
-        >
-          <button
-            onClick={() => setIsExpanded(true)}
-            className="btn btn-sm btn-ghost btn-circle"
-            aria-label="Expand toolbar"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m6-6H6" />
-            </svg>
-          </button>
-        </div>
-      </div>
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75" />
+        </svg>
+      </button>
     );
   }
 
   return (
     <div
       style={{
-        position: 'absolute',
+        position: 'fixed',
         left: `${position.x}px`,
         top: `${position.y}px`,
         zIndex: 1000,

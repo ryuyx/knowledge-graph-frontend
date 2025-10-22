@@ -1,8 +1,7 @@
 import React, { useRef, useEffect, useState, forwardRef, useImperativeHandle, useMemo } from 'react';
 import * as d3 from 'd3';
-import GraphToolbar from './GraphToolbar';
-import { useToolbarStore } from '@/store/graphToolbarStore';
 import type { Node as NodeType, Link as LinkType, GraphData, ToolbarConfig } from '@/types/graph';
+import GraphToolbar from './GraphToolbar';
 
 interface Node {
     id: string;
@@ -33,12 +32,15 @@ interface GraphProps {
     onNodesSelect?: (nodes: Node[]) => void;
     selectedNodeIds?: string[];
     onFileDropped?: (file: File, position: { x: number; y: number }) => void;
+    toolbarConfig: ToolbarConfig;
+    onToolbarConfigChange?: (config: ToolbarConfig) => void;
+    onToolbarReset?: () => void;
 }
 
 const DEFAULT_WIDTH = 500;
 const DEFAULT_HEIGHT = 200;
 
-const Graph = forwardRef<any, GraphProps>(({ data, width = DEFAULT_WIDTH, height = DEFAULT_HEIGHT, onNodeDoubleClick, onNodesSelect, selectedNodeIds = [], onFileDropped }, ref) => {
+const Graph = forwardRef<any, GraphProps>(({ data, width = DEFAULT_WIDTH, height = DEFAULT_HEIGHT, onNodeDoubleClick, onNodesSelect, selectedNodeIds = [], onFileDropped, toolbarConfig, onToolbarConfigChange, onToolbarReset }, ref) => {
     const svgRef = useRef<SVGSVGElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const [internalSelectedNodeIds, setInternalSelectedNodeIds] = useState<string[]>([]);
@@ -51,9 +53,6 @@ const Graph = forwardRef<any, GraphProps>(({ data, width = DEFAULT_WIDTH, height
     const simulationRef = useRef<d3.Simulation<Node, Link> | null>(null);
     const nodesDataRef = useRef<Node[]>([]);
     const linksDataRef = useRef<Link[]>([]);
-    
-    // Toolbar configuration from Zustand store
-    const { config: toolbarConfig, setConfig, resetConfig } = useToolbarStore();
 
 
     // Consolidated event handlers with useCallback
@@ -845,6 +844,16 @@ const Graph = forwardRef<any, GraphProps>(({ data, width = DEFAULT_WIDTH, height
             }}
             onContextMenu={e => e.preventDefault()}
         >
+            {/* Graph Toolbar */}
+            {onToolbarConfigChange && onToolbarReset && (
+                <GraphToolbar
+                    config={toolbarConfig}
+                    onConfigChange={onToolbarConfigChange}
+                    onReset={onToolbarReset}
+                    containerRef={containerRef}
+                />
+            )}
+            
             {/* Fullscreen Button */}
             <button
                 onClick={toggleFullscreen}
@@ -862,17 +871,6 @@ const Graph = forwardRef<any, GraphProps>(({ data, width = DEFAULT_WIDTH, height
                     </svg>
                 )}
             </button>
-
-            {/* Graph Toolbar */}
-            <GraphToolbar
-                config={toolbarConfig}
-                onConfigChange={(newConfig) => {
-                    setConfig(newConfig);
-                }}
-                onReset={() => {
-                    resetConfig();
-                }}
-            />
             
             <svg
                 ref={svgRef}

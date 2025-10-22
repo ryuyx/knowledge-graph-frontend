@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import Markdown from '@/components/Markdown';
 import NodeDetailDialog from '@/components/NodeDetailDialog';
 import Graph from '@/components/Graph'
+import { useToolbarStore } from '@/store/graphToolbarStore';
 import { getKnowledgeGraph, uploadKnowledgeItem, type GraphData as ApiGraphData } from '@/api/graph'
 import AudioCard from '@/components/AudioCard'
 import { getKnowledgeItem } from '@/api/graph';
@@ -26,6 +27,9 @@ interface Data {
 }
 
 function Home() {
+    // Toolbar configuration from Zustand store
+    const { config: toolbarConfig, setConfig: setToolbarConfig, resetConfig: resetToolbarConfig } = useToolbarStore();
+    
     // Import API helpers lazily at top of component scope to avoid SSR issues
     // (real import is added at file top via patch below)
     // Tag click handler: highlight node in graph
@@ -491,11 +495,14 @@ function Home() {
                             onNodesSelect={handleNodesSelect}
                             selectedNodeIds={selectedNodeIds}
                             onFileDropped={handleFileDropped}
+                            toolbarConfig={toolbarConfig}
+                            onToolbarConfigChange={setToolbarConfig}
+                            onToolbarReset={resetToolbarConfig}
                         />
                     </div>
                     <div className='pl-5'>
                         <h1 className="text-4xl font-bold">Build Your Knowledge!</h1>
-                        <p className="py-6">
+                        <div className="py-6">
                             Find something you're interested in and share it.<br /><br />
                             {/* Legend for node styles (hard-coded) */}
                             <div className="grid grid-cols-2 gap-x-6 gap-y-2 items-start mb-2">
@@ -520,7 +527,7 @@ function Home() {
                             <span className="text-base-content/50">2. Double-click to show the details.</span><br />
                             <span className="text-base-content/50">3. Drag and drop files into the graph to build.</span><br />
                             <span className="text-base-content/50">4. Click<span className="items-center mx-1 px-1 text-xs font-medium bg-primary-content text-primary rounded-full ">1</span> to focus the reference.</span><br />
-                        </p>
+                        </div>
                     </div>
                 </div>
             </div>
