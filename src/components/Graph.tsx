@@ -1,7 +1,7 @@
 import React, { useRef, useEffect, useState, forwardRef, useImperativeHandle, useMemo } from 'react';
 import * as d3 from 'd3';
 import GraphToolbar from './GraphToolbar';
-import { loadConfig, saveConfig, getDefaultConfig } from '@/utils/graphConfig';
+import { useToolbarStore } from '@/store/graphToolbarStore';
 import type { Node as NodeType, Link as LinkType, GraphData, ToolbarConfig } from '@/types/graph';
 
 interface Node {
@@ -52,8 +52,8 @@ const Graph = forwardRef<any, GraphProps>(({ data, width = DEFAULT_WIDTH, height
     const nodesDataRef = useRef<Node[]>([]);
     const linksDataRef = useRef<Link[]>([]);
     
-    // Toolbar configuration state
-    const [toolbarConfig, setToolbarConfig] = useState<ToolbarConfig>(() => loadConfig());
+    // Toolbar configuration from Zustand store
+    const { config: toolbarConfig, setConfig, resetConfig } = useToolbarStore();
 
 
     // Consolidated event handlers with useCallback
@@ -867,13 +867,10 @@ const Graph = forwardRef<any, GraphProps>(({ data, width = DEFAULT_WIDTH, height
             <GraphToolbar
                 config={toolbarConfig}
                 onConfigChange={(newConfig) => {
-                    setToolbarConfig(newConfig);
-                    saveConfig(newConfig);
+                    setConfig(newConfig);
                 }}
                 onReset={() => {
-                    const defaultConfig = getDefaultConfig();
-                    setToolbarConfig(defaultConfig);
-                    saveConfig(defaultConfig);
+                    resetConfig();
                 }}
             />
             
