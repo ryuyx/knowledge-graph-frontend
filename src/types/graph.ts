@@ -3,6 +3,7 @@ export interface ToolbarConfig {
   nameFilter: string;
   typeFilter: number[]; // [1,2,3,4] corresponds to category, topic, FILE, URL
   levelFilter: 'all' | 'category' | 'topic' | 'file';
+  minConnections: number; // minimum number of connections to show node, default 0
   
   // Visual adjustments
   nodeSize: number; // scale multiplier, default 1

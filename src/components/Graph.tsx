@@ -45,6 +45,8 @@ const Graph = forwardRef<any, GraphProps>(({ data, width = DEFAULT_WIDTH, height
     const [dragOverPosition, setDragOverPosition] = useState<{ x: number; y: number } | null>(null);
     const [rightSelectedNode, setRightSelectedNode] = useState<Node | null>(null);
     const [highlightedNodeIds, setHighlightedNodeIds] = useState<string[]>([]);
+    const [relatedNodeIds, setRelatedNodeIds] = useState<string[]>([]); // For click-to-highlight related nodes
+    const [relatedLinkIds, setRelatedLinkIds] = useState<string[]>([]); // For highlighting related links
     const [isFullscreen, setIsFullscreen] = useState(false);
     const simulationRef = useRef<d3.Simulation<Node, Link> | null>(null);
     const nodesDataRef = useRef<Node[]>([]);
@@ -57,10 +59,43 @@ const Graph = forwardRef<any, GraphProps>(({ data, width = DEFAULT_WIDTH, height
     // Consolidated event handlers with useCallback
     const handleNodeClick = React.useCallback((d: Node) => {
         console.log('节点信息:', d);
+        
         setInternalSelectedNodeIds((prev: string[]) => {
-            const newSelectedIds = prev.includes(d.id)
+            const isDeselecting = prev.includes(d.id);
+            const newSelectedIds = isDeselecting
                 ? prev.filter((id: string) => id !== d.id)
                 : [...prev, d.id];
+            
+            if (isDeselecting) {
+                // Clear related highlights when deselecting
+                setRelatedNodeIds([]);
+                setRelatedLinkIds([]);
+            } else {
+                // Find all related nodes and links
+                const relatedNodes: string[] = [];
+                const relatedLinks: string[] = [];
+                
+                linksDataRef.current.forEach(link => {
+                    const sourceId = typeof link.source === 'object' ? link.source.id : link.source;
+                    const targetId = typeof link.target === 'object' ? link.target.id : link.target;
+                    
+                    if (sourceId === d.id) {
+                        relatedNodes.push(targetId);
+                        relatedLinks.push(`${sourceId}-${targetId}`);
+                    } else if (targetId === d.id) {
+                        relatedNodes.push(sourceId);
+                        relatedLinks.push(`${sourceId}-${targetId}`);
+                    }
+                });
+                
+                // Include the clicked node itself
+                relatedNodes.push(d.id);
+                
+                // Set related nodes and links for highlighting
+                setRelatedNodeIds(relatedNodes);
+                setRelatedLinkIds(relatedLinks);
+            }
+            
             if (onNodesSelect) {
                 const selectedNodes = nodesDataRef.current.filter(node => newSelectedIds.includes(node.id));
                 onNodesSelect(selectedNodes);
@@ -219,6 +254,19 @@ const Graph = forwardRef<any, GraphProps>(({ data, width = DEFAULT_WIDTH, height
         };
     }, []);
 
+    // Calculate connection count for a node
+    const getNodeConnectionCount = React.useCallback((nodeId: string) => {
+        let count = 0;
+        linksDataRef.current.forEach(link => {
+            const sourceId = typeof link.source === 'object' ? link.source.id : link.source;
+            const targetId = typeof link.target === 'object' ? link.target.id : link.target;
+            if (sourceId === nodeId || targetId === nodeId) {
+                count++;
+            }
+        });
+        return count;
+    }, []);
+
     // Check if a node should be visible based on filter configuration
     const isNodeVisible = React.useCallback((node: Node) => {
         // Name filter
@@ -238,8 +286,16 @@ const Graph = forwardRef<any, GraphProps>(({ data, width = DEFAULT_WIDTH, height
             if (toolbarConfig.levelFilter === 'file' && (node.group !== 3 && node.group !== 4)) return false;
         }
         
+        // Connection count filter
+        if (toolbarConfig.minConnections > 0) {
+            const connectionCount = getNodeConnectionCount(node.id);
+            if (connectionCount < toolbarConfig.minConnections) {
+                return false;
+            }
+        }
+        
         return true;
-    }, [toolbarConfig.nameFilter, toolbarConfig.typeFilter, toolbarConfig.levelFilter]);
+    }, [toolbarConfig.nameFilter, toolbarConfig.typeFilter, toolbarConfig.levelFilter, toolbarConfig.minConnections, getNodeConnectionCount]);
 
     useEffect(() => {
         if (!svgRef.current) return;
@@ -367,6 +423,11 @@ const Graph = forwardRef<any, GraphProps>(({ data, width = DEFAULT_WIDTH, height
             .enter()
             .append("line")
             .attr("stroke-width", toolbarConfig.linkWidth)
+            .attr("data-link-id", (l: any) => {
+                const sourceId = typeof l.source === 'object' ? l.source.id : l.source;
+                const targetId = typeof l.target === 'object' ? l.target.id : l.target;
+                return `${sourceId}-${targetId}`;
+            })
             .style("opacity", (l: any) => {
                 const source = typeof l.source === 'object' ? l.source : nodes.find(n => n.id === l.source);
                 const target = typeof l.target === 'object' ? l.target : nodes.find(n => n.id === l.target);
@@ -708,6 +769,70 @@ const Graph = forwardRef<any, GraphProps>(({ data, width = DEFAULT_WIDTH, height
         node.filter(d => internalSelectedNodeIds.includes(d.id))
             .attr("stroke-dasharray", "0");
     }, [internalSelectedNodeIds, rightSelectedNode]);
+
+    // Handle related nodes and links highlighting
+    useEffect(() => {
+        const svg = svgRef.current;
+        if (!svg) return;
+        
+        const node = (svg as any).__nodeSelection as d3.Selection<SVGCircleElement, Node, any, any>;
+        const linkGroup = d3.select(svg).select('g').select('g');
+        
+        if (!node) return;
+        
+        // Update node opacity based on related nodes
+        if (relatedNodeIds.length > 0) {
+            node.transition().duration(300)
+                .style("opacity", (d: any) => {
+                    if (!isNodeVisible(d)) return 0;
+                    // Highlight related nodes, dim others
+                    return relatedNodeIds.includes(d.id) ? toolbarConfig.nodeOpacity : toolbarConfig.nodeOpacity * 0.2;
+                });
+        } else {
+            // Reset to normal opacity
+            node.transition().duration(300)
+                .style("opacity", (d: any) => isNodeVisible(d) ? toolbarConfig.nodeOpacity : 0);
+        }
+        
+        // Update link highlighting
+        if (linkGroup && relatedLinkIds.length > 0) {
+            linkGroup.selectAll('line')
+                .transition().duration(300)
+                .attr("stroke", (l: any) => {
+                    const sourceId = typeof l.source === 'object' ? l.source.id : l.source;
+                    const targetId = typeof l.target === 'object' ? l.target.id : l.target;
+                    const linkId = `${sourceId}-${targetId}`;
+                    return relatedLinkIds.includes(linkId) ? "#ff6b35" : "#999";
+                })
+                .attr("stroke-width", (l: any) => {
+                    const sourceId = typeof l.source === 'object' ? l.source.id : l.source;
+                    const targetId = typeof l.target === 'object' ? l.target.id : l.target;
+                    const linkId = `${sourceId}-${targetId}`;
+                    return relatedLinkIds.includes(linkId) ? toolbarConfig.linkWidth * 2 : toolbarConfig.linkWidth;
+                })
+                .style("opacity", (l: any) => {
+                    const source = typeof l.source === 'object' ? l.source : nodesDataRef.current.find(n => n.id === l.source);
+                    const target = typeof l.target === 'object' ? l.target : nodesDataRef.current.find(n => n.id === l.target);
+                    if (!source || !target || !isNodeVisible(source) || !isNodeVisible(target)) return 0;
+                    
+                    const sourceId = typeof l.source === 'object' ? l.source.id : l.source;
+                    const targetId = typeof l.target === 'object' ? l.target.id : l.target;
+                    const linkId = `${sourceId}-${targetId}`;
+                    return relatedLinkIds.includes(linkId) ? 1 : 0.2;
+                });
+        } else if (linkGroup) {
+            // Reset links to normal
+            linkGroup.selectAll('line')
+                .transition().duration(300)
+                .attr("stroke", "#999")
+                .attr("stroke-width", toolbarConfig.linkWidth)
+                .style("opacity", (l: any) => {
+                    const source = typeof l.source === 'object' ? l.source : nodesDataRef.current.find(n => n.id === l.source);
+                    const target = typeof l.target === 'object' ? l.target : nodesDataRef.current.find(n => n.id === l.target);
+                    return (source && target && isNodeVisible(source) && isNodeVisible(target)) ? 0.6 : 0;
+                });
+        }
+    }, [relatedNodeIds, relatedLinkIds, toolbarConfig.nodeOpacity, toolbarConfig.linkWidth, isNodeVisible]);
 
     return (
         <div

@@ -76,7 +76,6 @@ const GraphToolbar: React.FC<GraphToolbarProps> = ({ config, onConfigChange, onR
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m6-6H6" />
             </svg>
           </button>
-          <span className="text-sm font-medium">Graph Controls</span>
         </div>
       </div>
     );
@@ -202,6 +201,31 @@ const GraphToolbar: React.FC<GraphToolbarProps> = ({ config, onConfigChange, onR
                 <option value="topic">仅关键词</option>
                 <option value="file">仅文件</option>
               </select>
+            </div>
+
+            {/* Connection Count Filter */}
+            <div>
+              <label className="label py-1">
+                <span className="label-text text-xs">最小连接数</span>
+                <span className="label-text-alt text-xs">{config.minConnections}</span>
+              </label>
+              <input
+                type="range"
+                min="0"
+                max="10"
+                step="1"
+                value={config.minConnections}
+                onChange={(e) => updateConfig({ minConnections: parseInt(e.target.value) })}
+                className="range range-xs"
+              />
+              <div className="flex justify-between text-xs text-base-content/50 px-1 mt-1">
+                <span>0</span>
+                <span>5</span>
+                <span>10</span>
+              </div>
+              <p className="text-xs text-base-content/60 mt-1">
+                只显示连接数 ≥ {config.minConnections} 的节点
+              </p>
             </div>
           </div>
         </div>

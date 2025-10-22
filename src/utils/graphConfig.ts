@@ -6,6 +6,7 @@ export const getDefaultConfig = (): ToolbarConfig => ({
   nameFilter: '',
   typeFilter: [1, 2, 3, 4],
   levelFilter: 'all',
+  minConnections: 0,
   nodeSize: 1,
   textSize: 1,
   nodeOpacity: 1,
