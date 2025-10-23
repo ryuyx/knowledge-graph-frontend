@@ -162,7 +162,7 @@ const Markdown: React.FC<MarkdownProps> = ({ content, className = "", renderTagH
             </h4>
         ),
         ul: ({ children }: { children?: React.ReactNode }) => (
-            <ul className="list-disc list-inside my-3 space-y-1 text-gray-700">
+            <ul className="list-disc list-outside my-3 ml-5 space-y-1 text-gray-700">
                 {children}
             </ul>
         ),
