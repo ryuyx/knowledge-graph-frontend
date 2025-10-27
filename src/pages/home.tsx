@@ -29,13 +29,15 @@ interface Data {
 function Home() {
     // Toolbar configuration from Zustand store
     const { config: toolbarConfig, setConfig: setToolbarConfig, resetConfig: resetToolbarConfig } = useToolbarStore();
-    
+
     // Import API helpers lazily at top of component scope to avoid SSR issues
     // (real import is added at file top via patch below)
     // Tag click handler: highlight node in graph
     const handleTagClick = (chunkNumber: string) => {
         const index = parseInt(chunkNumber) - 1;
-        const ref = references[index];
+        // Find the last assistant message with references
+        const lastAssistantMsg = [...messages].reverse().find(m => m.role === 'assistant' && m.references);
+        const ref = lastAssistantMsg?.references?.[index];
         const highlightId = ref?.meta_data?.knowledge_item_id || chunkNumber;
         if (graphData && graphRef.current && typeof graphRef.current.setNodesHighlighted === 'function') {
             // Find node by id
@@ -48,20 +50,23 @@ function Home() {
         }
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
-    const [activeTab, setActiveTab] = useState('Chat')
-    // 分离不同tab的输入内容
     const [chatMessage, setChatMessage] = useState('')
-    const [linkUrl, setLinkUrl] = useState('')
-    const [longText, setLongText] = useState('')
-    const [response, setResponse] = useState('')
-    const [references, setReferences] = useState<any[]>([])
+    const [messages, setMessages] = useState<Array<{ role: 'user' | 'assistant' | 'system', content: string, references?: any[] }>>([
+        {
+            role: 'system',
+            content: 'guide'
+        }
+    ])
+    const [currentResponse, setCurrentResponse] = useState('')
     // Chat textarea ref for auto-focus
     const chatTextareaRef = useRef<HTMLTextAreaElement | null>(null)
+    // Messages container ref for auto-scroll
+    const messagesContainerRef = useRef<HTMLDivElement | null>(null)
 
     // 节点详情弹窗相关 state
     const [nodeDetail, setNodeDetail] = useState<any | null>(null)
     const nodeDetailModalRef = useRef<HTMLDialogElement | null>(null);
-    
+
     // 选中的节点状态
     const [selectedNodes, setSelectedNodes] = useState<any[]>([])
     const [selectedNodeIds, setSelectedNodeIds] = useState<string[]>([])
@@ -71,197 +76,87 @@ function Home() {
     // Graph组件ref
     const graphRef = useRef<any>(null);
 
-    // 拖拽上传状态
-    const [isDragOver, setIsDragOver] = useState(false)
+// 上传进度状态类型
+interface UploadStage {
+    name: 'TEXT_EXTRACTION' | 'HOT_WORD_GENERATION' | 'EMBEDDING_GENERATION' | 'HOT_WORD_ASSOCIATION_GENERATION';
+    status: 'pending' | 'processing' | 'completed' | 'failed';
+    icon: string;
+    message?: string;
+}
     const [isLoading, setIsLoading] = useState(false)
-    
-    // 上传进度状态
-    interface UploadStage {
-        name: string;
-        status: 'pending' | 'processing' | 'completed' | 'failed';
-        icon: string;
-        message?: string;
-    }
-    
+    const uploadProgressMsgIndexRef = useRef<number | null>(null)
+    // Keep all timeline message indices so they remain visible after completion
+    const uploadTimelineMessageIndicesRef = useRef<Set<number>>(new Set())
     const [uploadStages, setUploadStages] = useState<UploadStage[]>([
         { name: 'TEXT_EXTRACTION', status: 'pending', icon: '📄', message: 'Extracting text...' },
         { name: 'HOT_WORD_GENERATION', status: 'pending', icon: '🔤', message: 'Generating keywords...' },
         { name: 'EMBEDDING_GENERATION', status: 'pending', icon: '🧠', message: 'Creating embeddings...' },
         { name: 'HOT_WORD_ASSOCIATION_GENERATION', status: 'pending', icon: '🔗', message: 'Building associations...' },
-    ]);
-    const [currentFileName, setCurrentFileName] = useState<string>('');
-    
+    ])
+    const [currentFileName, setCurrentFileName] = useState<string>('')
+
     // 播客列表状态
     const [podcasts, setPodcasts] = useState<PodcastItem[]>([])
     const [podcastsLoading, setPodcastsLoading] = useState(false)
 
-    const tabs = [
-        { name: 'Chat', icon: '💭' },
-        { name: 'Link', icon: '🔗' },
-        { name: 'Upload File', icon: '📁' },
-        { name: 'Long Text', icon: '📄' }
-    ]
-
-    const handleUploadKnowledge = async (isPodcast: boolean = false) => {
-        let currentInput = '';
-        switch(activeTab) {
-            case 'Chat':
-                currentInput = chatMessage;
-                break;
-            case 'Link':
-                currentInput = linkUrl;
-                break;
-            case 'Long Text':
-                currentInput = longText;
-                break;
-            default:
-                currentInput = '';
-        }
-        if (!currentInput.trim()) return;
-        setResponse('');
-        setReferences([]);
+    const handleSendChat = async () => {
+        if (!chatMessage.trim()) return;
+        
+        // Add user message to history
+        setMessages(prev => [...prev, { role: 'user', content: chatMessage }]);
+        const userMessage = chatMessage;
+        setChatMessage(''); // Clear the message input
+        setCurrentResponse('');
         setIsLoading(true);
+
         try {
-            if (activeTab === 'Link') {
-                // Use uploadKnowledgeItem for URL source to reuse SSE processing used for files
-                // update stages to start
-                setUploadStages([
-                    { name: 'TEXT_EXTRACTION', status: 'processing', icon: '📄', message: 'Extracting text from URL...' },
-                    { name: 'HOT_WORD_GENERATION', status: 'pending', icon: '🔤', message: 'Generating keywords...' },
-                    { name: 'EMBEDDING_GENERATION', status: 'pending', icon: '🧠', message: 'Creating embeddings...' },
-                    { name: 'HOT_WORD_ASSOCIATION_GENERATION', status: 'pending', icon: '🔗', message: 'Building associations...' },
-                ]);
-
-                // uploadKnowledgeItem emits SSE-like messages; import from api/graph
-                await uploadKnowledgeItem(currentInput, 'URL', (data: any) => {
-                    const eventType = data.type || data.event;
-                    if (eventType === 'TEXT_EXTRACTION') {
-                        updateStageStatus('TEXT_EXTRACTION', 'completed', 'Text extracted from URL');
-                        updateStageStatus('HOT_WORD_GENERATION', 'processing');
-                        if (data.data?.knowledge_item_id) {
-                            setCurrentFileName(String(data.data.knowledge_item_id));
-                        }
-                    } else if (eventType === 'HOT_WORD_GENERATION') {
-                        updateStageStatus('HOT_WORD_GENERATION', 'completed', `Generated ${data.data?.length || 0} keywords`);
-                        updateStageStatus('EMBEDDING_GENERATION', 'processing');
-                    } else if (eventType === 'EMBEDDING_GENERATION') {
-                        updateStageStatus('EMBEDDING_GENERATION', 'completed', 'Embeddings created');
-                        updateStageStatus('HOT_WORD_ASSOCIATION_GENERATION', 'processing');
-                    } else if (eventType === 'HOT_WORD_ASSOCIATION_GENERATION') {
-                        updateStageStatus('HOT_WORD_ASSOCIATION_GENERATION', 'completed', 'Associations built');
-                    } else if (eventType === 'RunContent' || eventType === 'CHAT_CONTENT') {
-                        // Some backends may send generated content chunks
-                        if (data.content) setResponse(prev => prev + data.content);
-                    } else if (eventType === 'RunReferences' || eventType === 'REFERENCES') {
-                        if (Array.isArray(data.references)) {
-                            setReferences(data.references);
-                            const highlightIds = data.references.map((item: any) => item.meta_data?.knowledge_item_id).filter(Boolean);
-                            if (graphRef.current && typeof graphRef.current.setNodesHighlighted === 'function') {
-                                graphRef.current.setNodesHighlighted(highlightIds, true);
-                            }
-                        }
-                    } else if (eventType === 'FAILED') {
-                        const currentStage = uploadStages.find(s => s.status === 'processing');
-                        if (currentStage) {
-                            updateStageStatus(currentStage.name, 'failed', data.data?.error || 'Processing failed');
+            let assistantMessage = '';
+            let messageReferences: any[] = [];
+            
+            await chat(userMessage, (data: any) => {
+                if (data.event === 'RunContent') {
+                    assistantMessage += data.content;
+                    setCurrentResponse(assistantMessage);
+                } else if (data.event === 'RunReferences') {
+                    if (Array.isArray(data.references)) {
+                        messageReferences = data.references;
+                        const highlightIds = data.references.map((item: any) => item.meta_data?.knowledge_item_id).filter(Boolean);
+                        if (graphRef.current && typeof graphRef.current.setNodesHighlighted === 'function') {
+                            graphRef.current.setNodesHighlighted(highlightIds, true);
                         }
                     }
-                }, isPodcast);
-
-                // refresh graph data after processing
-                await fetchGraphData();
-                setResponse(prev => prev + '\n✅ URL successfully processed and added to graph!');
-            } else if (activeTab === 'Long Text') {
-                // Use uploadKnowledgeItem for TEXT source similar to URL processing
-                setUploadStages([
-                    { name: 'TEXT_EXTRACTION', status: 'processing', icon: '📄', message: 'Processing text content...' },
-                    { name: 'HOT_WORD_GENERATION', status: 'pending', icon: '🔤', message: 'Generating keywords...' },
-                    { name: 'EMBEDDING_GENERATION', status: 'pending', icon: '🧠', message: 'Creating embeddings...' },
-                    { name: 'HOT_WORD_ASSOCIATION_GENERATION', status: 'pending', icon: '🔗', message: 'Building associations...' },
-                ]);
-
-                await uploadKnowledgeItem(currentInput, 'TEXT', (data: any) => {
-                    const eventType = data.type || data.event;
-                    if (eventType === 'TEXT_EXTRACTION') {
-                        updateStageStatus('TEXT_EXTRACTION', 'completed', 'Text processed successfully');
-                        updateStageStatus('HOT_WORD_GENERATION', 'processing');
-                        if (data.data?.knowledge_item_id) {
-                            setCurrentFileName(String(data.data.knowledge_item_id));
-                        }
-                    } else if (eventType === 'HOT_WORD_GENERATION') {
-                        updateStageStatus('HOT_WORD_GENERATION', 'completed', `Generated ${data.data?.length || 0} keywords`);
-                        updateStageStatus('EMBEDDING_GENERATION', 'processing');
-                    } else if (eventType === 'EMBEDDING_GENERATION') {
-                        updateStageStatus('EMBEDDING_GENERATION', 'completed', 'Embeddings created');
-                        updateStageStatus('HOT_WORD_ASSOCIATION_GENERATION', 'processing');
-                    } else if (eventType === 'HOT_WORD_ASSOCIATION_GENERATION') {
-                        updateStageStatus('HOT_WORD_ASSOCIATION_GENERATION', 'completed', 'Associations built');
-                    } else if (eventType === 'RunContent' || eventType === 'CHAT_CONTENT') {
-                        // Some backends may send generated content chunks
-                        if (data.content) setResponse(prev => prev + data.content);
-                    } else if (eventType === 'RunReferences' || eventType === 'REFERENCES') {
-                        if (Array.isArray(data.references)) {
-                            setReferences(data.references);
-                            const highlightIds = data.references.map((item: any) => item.meta_data?.knowledge_item_id).filter(Boolean);
-                            if (graphRef.current && typeof graphRef.current.setNodesHighlighted === 'function') {
-                                graphRef.current.setNodesHighlighted(highlightIds, true);
-                            }
-                        }
-                    } else if (eventType === 'FAILED') {
-                        const currentStage = uploadStages.find(s => s.status === 'processing');
-                        if (currentStage) {
-                            updateStageStatus(currentStage.name, 'failed', data.data?.error || 'Processing failed');
-                        }
-                    }
-                }, isPodcast);
-
-                // refresh graph data after processing
-                await fetchGraphData();
-                setResponse(prev => prev + '\n✅ Text successfully analyzed and added to graph!');
-            } else {
-                // existing chat flow (Chat only)
-                await chat(currentInput, (data: any) => {
-                    if (data.event === 'RunContent') {
-                        setResponse(prev => prev + data.content);
-                    } else if (data.event === 'RunReferences') {
-                        if (Array.isArray(data.references)) {
-                            setReferences(data.references);
-                            const highlightIds = data.references.map((item: any) => item.meta_data?.knowledge_item_id).filter(Boolean);
-                            if (graphRef.current && typeof graphRef.current.setNodesHighlighted === 'function') {
-                                graphRef.current.setNodesHighlighted(highlightIds, true);
-                            }
-                        }
-                    }
-                });
-            }
+                }
+            });
+            
+            // Add complete assistant message to history
+            setMessages(prev => [...prev, { 
+                role: 'assistant', 
+                content: assistantMessage,
+                references: messageReferences 
+            }]);
+            setCurrentResponse('');
         } catch (error) {
-            console.error('Failed to send chat, upload link, or process text:', error);
-            setResponse('处理失败，请重试。');
-            // 标记所有处理中的阶段为失败
-            if (activeTab === 'Link' || activeTab === 'Long Text') {
-                setUploadStages(prev => prev.map(stage => 
-                    stage.status === 'processing' ? { ...stage, status: 'failed' as const } : stage
-                ));
-            }
+            console.error('Failed to send chat:', error);
+            setMessages(prev => [...prev, { role: 'assistant', content: '处理失败，请重试。' }]);
+            setCurrentResponse('');
         } finally {
             setIsLoading(false);
-            // 为Link和Long Text tab重置进度显示
-            if (activeTab === 'Link' || activeTab === 'Long Text') {
-                setTimeout(() => {
-                    if (!isLoading) {
-                        resetUploadStages();
-                    }
-                }, 5000);
-            }
         }
     }
 
-    // Auto-focus chat textarea when Chat tab is active
+    // Auto-focus chat textarea when component mounts
     useEffect(() => {
-        if (activeTab === 'Chat' && chatTextareaRef.current) {
+        if (chatTextareaRef.current) {
             chatTextareaRef.current.focus();
         }
-    }, [activeTab]);
+    }, []);
+
+    // Auto-scroll to bottom when messages or currentResponse changes
+    useEffect(() => {
+        if (messagesContainerRef.current) {
+            messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+        }
+    }, [messages, currentResponse]);
 
     // 双击节点显示详情（异步获取）
     const handleNodeDoubleClick = async (node: any) => {
@@ -280,7 +175,7 @@ function Home() {
             } catch (error) {
                 setNodeDetail({ error: '获取 topic 详情失败' });
             }
-        } else if (node && (node.type === 'FILE' || node.type === 'URL'|| node.type === 'TEXT')) {
+        } else if (node && (node.type === 'FILE' || node.type === 'URL' || node.type === 'TEXT')) {
             try {
                 const detail = await getKnowledgeItem(node.id);
                 setNodeDetail(detail);
@@ -294,13 +189,13 @@ function Home() {
             if (nodeDetailModalRef.current) nodeDetailModalRef.current.showModal();
         }, 0);
     };
-    
+
     // 处理节点选择
     const handleNodesSelect = (nodes: any[]) => {
         setSelectedNodes(nodes);
         setSelectedNodeIds(nodes.map(node => node.id));
     };
-    
+
     // 移除选中的节点
     const removeSelectedNode = (nodeId: string) => {
         setSelectedNodes(prev => prev.filter(node => node.id !== nodeId));
@@ -315,10 +210,10 @@ function Home() {
             const convertedData = {
                 nodes: data.nodes.map(node => ({
                     group: node.type === 'category' ? 1
-                            : node.type === 'topic' ? 2
+                        : node.type === 'topic' ? 2
                             : node.type === 'FILE' ? 3
-                            : node.type === 'URL' ? 4
-                            : 0,
+                                : node.type === 'URL' ? 4
+                                    : 0,
                     ...node
                 })),
                 links: data.links
@@ -348,133 +243,128 @@ function Home() {
         fetchPodcasts();
     }, []);
 
-    // 重置上传进度状态
-    const resetUploadStages = () => {
-        setUploadStages([
-            { name: 'TEXT_EXTRACTION', status: 'pending', icon: '📄', message: 'Extracting text...' },
-            { name: 'HOT_WORD_GENERATION', status: 'pending', icon: '🔤', message: 'Generating keywords...' },
-            { name: 'EMBEDDING_GENERATION', status: 'pending', icon: '🧠', message: 'Creating embeddings...' },
-            { name: 'HOT_WORD_ASSOCIATION_GENERATION', status: 'pending', icon: '🔗', message: 'Building associations...' },
-        ]);
-        setCurrentFileName('');
+    // Build markdown content for 4-stage progress
+    const buildUploadProgressMarkdownFromStages = (filename: string, stages: UploadStage[]) => {
+        const header = filename ? `开始处理：${filename}` : '开始处理';
+        const statusIcon = (s: UploadStage['status']) => (
+            s === 'completed' ? '✅' : s === 'processing' ? '🔄' : s === 'failed' ? '❌' : '⏳'
+        );
+        const lines = stages.map(s => `- ${statusIcon(s.status)} ${s.icon} ${s.name}${s.message ? ` · ${s.message}` : ''}`);
+        return `${header}\n\n${lines.join('\n')}`;
     };
 
-    // 更新特定阶段的状态
-    const updateStageStatus = (stageName: string, status: 'processing' | 'completed' | 'failed', detail?: string) => {
-        console.log('🔄 Updating stage:', stageName, 'to', status, detail);
-        setUploadStages(prev => {
-            const updated = prev.map(stage => 
-                stage.name === stageName 
-                    ? { ...stage, status, message: detail || stage.message }
-                    : stage
-            );
-            console.log('📊 Updated stages:', updated);
+    const updateProgressMessageFromStages = (stages: UploadStage[], filename: string, extraNote?: string) => {
+        const idx = uploadProgressMsgIndexRef.current;
+        if (idx == null) return;
+        const content = buildUploadProgressMarkdownFromStages(filename, stages) + (extraNote ? `\n\n${extraNote}` : '');
+        setMessages(prev => {
+            if (!prev[idx]) return prev;
+            const updated = [...prev];
+            updated[idx] = { ...updated[idx], content };
             return updated;
         });
     };
 
-    // 处理文件拖拽 - 调用uploadKnowledgeItem上传文件
-    const handleFileDropped = async (file: File, position: { x: number; y: number }) => {
-        console.log('File dropped:', file.name, 'at position:', position);
-        setResponse('');
-        setIsLoading(true);
-        setCurrentFileName(file.name);
-        
-        // 重置并开始第一个阶段
-        setUploadStages([
+    const resetUploadStagesForStart = (filename: string) => {
+        const initial: UploadStage[] = [
             { name: 'TEXT_EXTRACTION', status: 'processing', icon: '📄', message: 'Extracting text...' },
             { name: 'HOT_WORD_GENERATION', status: 'pending', icon: '🔤', message: 'Generating keywords...' },
             { name: 'EMBEDDING_GENERATION', status: 'pending', icon: '🧠', message: 'Creating embeddings...' },
             { name: 'HOT_WORD_ASSOCIATION_GENERATION', status: 'pending', icon: '🔗', message: 'Building associations...' },
-        ]);
-        
-        let newKnowledgeItemId: string | null = null;
+        ];
+        setUploadStages(initial);
+        setCurrentFileName(filename);
+        const initialContent = buildUploadProgressMarkdownFromStages(filename, initial);
+        setMessages(prev => {
+            const next = [...prev, { role: 'assistant' as const, content: initialContent }];
+            const idx = next.length - 1;
+            uploadProgressMsgIndexRef.current = idx;
+            uploadTimelineMessageIndicesRef.current.add(idx);
+            return next;
+        });
+    };
+
+    const updateStageStatus = (name: UploadStage['name'], status: UploadStage['status'], message?: string) => {
+        setUploadStages(prev => {
+            const next = prev.map(s => s.name === name ? { ...s, status, message: message ?? s.message } : s);
+            updateProgressMessageFromStages(next, currentFileName);
+            return next;
+        });
+    };
+
+    // File dropped handler: stream 4-stage progress into chat
+    const handleFileDropped = async (file: File) => {
+        resetUploadStagesForStart(file.name);
+
         try {
             await uploadKnowledgeItem(file, 'FILE', (data: any) => {
-                console.log('📨 SSE Event received:', data);
-                const eventType = data.type;
-                
+                const eventType: string = (data?.type || data?.event || data?.status || '').toString();
+                const msg: string | undefined = data?.message || data?.detail;
+
                 if (eventType === 'TEXT_EXTRACTION') {
-                    updateStageStatus('TEXT_EXTRACTION', 'completed', 'Text extracted successfully');
-                    if (data.data.knowledge_item_id) {
-                        newKnowledgeItemId = data.data.knowledge_item_id;
-                    }
-                    // 开始下一阶段
+                    updateStageStatus('TEXT_EXTRACTION', 'completed', 'Text extracted');
                     updateStageStatus('HOT_WORD_GENERATION', 'processing');
+                    // Keep original filename instead of replacing with knowledge_item_id
+                    // if (data?.data?.knowledge_item_id) {
+                    //     setCurrentFileName(String(data.data.knowledge_item_id));
+                    // }
                 } else if (eventType === 'HOT_WORD_GENERATION') {
-                    updateStageStatus('HOT_WORD_GENERATION', 'completed', `Generated ${data.data?.length || 0} keywords`);
+                    const count = Array.isArray(data?.data) ? data.data.length : (data?.data?.length ?? undefined);
+                    updateStageStatus('HOT_WORD_GENERATION', 'completed', typeof count === 'number' ? `Generated ${count} keywords` : 'Keywords generated');
                     updateStageStatus('EMBEDDING_GENERATION', 'processing');
                 } else if (eventType === 'EMBEDDING_GENERATION') {
                     updateStageStatus('EMBEDDING_GENERATION', 'completed', 'Embeddings created');
                     updateStageStatus('HOT_WORD_ASSOCIATION_GENERATION', 'processing');
                 } else if (eventType === 'HOT_WORD_ASSOCIATION_GENERATION') {
                     updateStageStatus('HOT_WORD_ASSOCIATION_GENERATION', 'completed', 'Associations built');
-                }else if (eventType === 'FAILED') {
-                    // 找到当前处理中的阶段并标记为失败
-                    const currentStage = uploadStages.find(s => s.status === 'processing');
-                    if (currentStage) {
-                        updateStageStatus(currentStage.name, 'failed', data.data?.error || 'Processing failed');
-                    }
+                } else if (eventType === 'FAILED') {
+                    setUploadStages(prev => {
+                        const idx = prev.findIndex(s => s.status === 'processing');
+                        if (idx !== -1) {
+                            const next = prev.slice() as UploadStage[];
+                            next[idx] = { ...next[idx], status: 'failed' as const, message: msg || 'Processing failed' };
+                            updateProgressMessageFromStages(next, currentFileName, '❌ 上传或处理失败');
+                            return next;
+                        }
+                        const next = prev.map(s => s) as UploadStage[];
+                        updateProgressMessageFromStages(next, currentFileName, '❌ 上传或处理失败');
+                        return next;
+                    });
                 }
             });
-            
-            // 上传完成后刷新图数据
+
+            setUploadStages(prev => {
+                const hasFailure = prev.some(s => s.status === 'failed');
+                const next: UploadStage[] = hasFailure 
+                    ? prev 
+                    : prev.map(s => (s.status === 'pending' || s.status === 'processing') 
+                        ? { ...s, status: 'completed' as const } 
+                        : s);
+                updateProgressMessageFromStages(next, currentFileName, hasFailure ? undefined : '✅ 已添加到知识图谱');
+                return next;
+            });
+
             await fetchGraphData();
-            setResponse('✅ Knowledge item successfully processed and added to graph!');
-        } catch (error) {
-            console.error('Failed to upload file:', error);
-            setResponse('❌ Upload failed. Please try again.');
-            // 标记所有处理中的阶段为失败
-            setUploadStages(prev => prev.map(stage => 
-                stage.status === 'processing' ? { ...stage, status: 'failed' as const } : stage
-            ));
+        } catch (err) {
+            console.error('Upload failed:', err);
+            setUploadStages(prev => {
+                const next: UploadStage[] = prev.map(s => s.status === 'completed' 
+                    ? s 
+                    : { ...s, status: 'failed' as const, message: s.message });
+                updateProgressMessageFromStages(next, currentFileName, '❌ 上传或处理失败，请重试。');
+                return next;
+            });
         } finally {
-            setIsLoading(false);
-            // 3秒后重置进度显示
-            setTimeout(() => {
-                if (!isLoading) {
-                    resetUploadStages();
-                }
-            }, 5000);
+            uploadProgressMsgIndexRef.current = null;
         }
     };
 
-    // 拖拽事件处理
-    const handleDragEnter = (e: React.DragEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        setIsDragOver(true);
-    };
-
-    const handleDragLeave = (e: React.DragEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        setIsDragOver(false);
-    };
-
-    const handleDragOver = (e: React.DragEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-    };
-
-    const handleDrop = (e: React.DragEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        setIsDragOver(false);
-
-        const files = e.dataTransfer.files;
-        if (files && files.length > 0) {
-            const file = files[0];
-            handleFileDropped(file, { x: 0, y: 0 });
-        }
-    };
-
-    // Handle Ctrl+Enter to send chat
+    // Handle Enter to send chat
     const handleChatKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-        if (activeTab === 'Chat' && e.key === 'Enter') {
+        if (e.key === 'Enter') {
             e.preventDefault();
             if (chatMessage.trim() && !isLoading) {
-                handleUploadKnowledge();
+                handleSendChat();
             }
         }
     };
@@ -482,485 +372,167 @@ function Home() {
     return (
         <div className="min-h-screen flex flex-col justify-center items-center bg-gradient-to-br from-white/70 via-pink-50/50 to-blue-50/70 gap-5 pb-30">
             {/* Main Container */}
-            <div className="hero min-h-100 px-20 transition-all duration-500 max-w-6xl">
-                <div className="hero-content flex-col lg:flex-row">
-                    <div className="h-96 w-150 border border-neutral/20 rounded-2xl overflow-hidden transition-all duration-500">
-                        <Graph 
+            <section className="hero min-h-100 py-10 transition-all duration-500 w-full">
+                <div className="hero-content flex-col lg:flex-row gap-5 w-full items-start p-0">
+                    {/* Graph Section */}
+                    <div className="h-[60vh] lg:h-[700px] flex-1 border border-neutral/20 rounded-2xl overflow-hidden transition-all duration-500">
+                        <Graph
                             ref={graphRef}
-                            data={graphData || { nodes: [], links: [] }} 
-                            key="init" 
-                            width={500} 
-                            height={200} 
-                            onNodeDoubleClick={handleNodeDoubleClick} 
+                            data={graphData || { nodes: [], links: [] }}
+                            key="init"
+                            width={500}
+                            height={200}
+                            onNodeDoubleClick={handleNodeDoubleClick}
                             onNodesSelect={handleNodesSelect}
                             selectedNodeIds={selectedNodeIds}
-                            onFileDropped={handleFileDropped}
+                            onFileDropped={(file) => handleFileDropped(file)}
                             toolbarConfig={toolbarConfig}
                             onToolbarConfigChange={setToolbarConfig}
                             onToolbarReset={resetToolbarConfig}
                         />
                     </div>
-                    <div className='pl-5'>
-                        <h1 className="text-4xl font-bold">Build Your Knowledge!</h1>
-                        <div className="py-6">
-                            Find something you're interested in and share it.<br /><br />
-                            {/* Legend for node styles (hard-coded) */}
-                            <div className="grid grid-cols-2 gap-x-6 gap-y-2 items-start mb-2">
-                                <div className="flex items-center gap-3">
-                                    <span aria-hidden className="inline-block w-5 h-5 rounded-full" style={{ backgroundColor: '#ef7234'}}></span>
-                                    <span style={{ fontSize: '12px' }} className="text-base-content/80">category</span>
-                                </div>
-                                <div className="flex items-center gap-3">
-                                    <span aria-hidden className="inline-block w-5 h-5 rounded-full" style={{ backgroundColor: '#76b7b2' }}></span>
-                                    <span style={{ fontSize: '12px' }} className="text-base-content/80">keyword / topic</span>
-                                </div>
-                                <div className="flex items-center gap-3">
-                                    <span aria-hidden className="inline-block w-5 h-5 rounded-full" style={{ backgroundColor: '#3c3c43' }}></span>
-                                    <span style={{ fontSize: '12px' }} className="text-base-content/80">file</span>
-                                </div>
-                                <div className="flex items-center gap-3">
-                                    <span aria-hidden className="inline-block w-5 h-5 rounded-full" style={{ backgroundColor: '#1f77b4' }}></span>
-                                    <span style={{ fontSize: '12px' }} className="text-base-content/80">url</span>
-                                </div>
-                            </div>
-                            <span className="text-base-content/50">1. Ask something about document.</span><br />
-                            <span className="text-base-content/50">2. Double-click to show the details.</span><br />
-                            <span className="text-base-content/50">3. Drag and drop files into the graph to build.</span><br />
-                            <span className="text-base-content/50">4. Click<span className="items-center mx-1 px-1 text-xs font-medium bg-primary-content text-primary rounded-full ">1</span> to focus the reference.</span><br />
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div className="rounded-lg p-5 bg-base-100 shadow">
-                {/* Tab Navigation */}
-                <div role="tablist" className="tabs tabs-box w-full">
-                    {tabs.map((tab) => (
-                        <a
-                            key={tab.name}
-                            role="tab"
-                            className={`tab flex-1 ${activeTab === tab.name ? ' tab-active' : ''}`}
-                            onClick={() => setActiveTab(tab.name)}
-                            tabIndex={0}
-                        >
-                            <span className={`mr-2`}>{tab.icon}</span>
-                            <span className="hidden sm:inline">{tab.name}</span>
-                        </a>
-                    ))}
-                </div>
 
-                {/* Main Content Area */}
-                <div className="my-5">
-                    <div className="relative group">
-                        {/* Chat Attachments/Context Bar */}
-                        {/* <div className="mb-2 w-full">
-                            <div className="flex items-center gap-2 flex-wrap">
-                                {selectedNodes.map((node) => (
-                                    <div
-                                        key={node.id}
-                                        className="flex items-center gap-2 px-2 py-1 bg-base-200 rounded cursor-pointer text-xs shadow border border-base-300 hover:bg-base-300 transition"
-                                        tabIndex={0}
-                                        role="button"
-                                        aria-label={`Selected node: ${node.id}`}
-                                        draggable="true"
-                                    >
-                                        <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 20 20">
-                                            <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                                        </svg>
-                                        <span>{node.id}</span>
-                                        <button
-                                            type="button"
-                                            className="ml-1 p-0.5 rounded hover:bg-base-100 text-base-content/50 hover:text-error transition"
-                                            tabIndex={-1}
-                                            aria-label="Remove from context"
-                                            onClick={() => removeSelectedNode(node.id)}
-                                        >
-                                            <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 20 20">
-                                                <path strokeLinecap="round" strokeLinejoin="round" d="M6 6l8 8M6 14L14 6" />
-                                            </svg>
-                                        </button>
-                                    </div>
-                                ))}
-                            </div>
-                        </div> */}
-                        {activeTab === 'Upload File' ? (
-                            <>
-                                {console.log('✅ Rendering Upload File tab content')}
-                                <div 
-                                    className={`flex flex-col items-center justify-center w-full py-8 border-2 border-dashed rounded-xl transition-all duration-200 ${
-                                        isDragOver 
-                                            ? 'border-primary bg-primary/10 scale-[1.02]' 
-                                            : 'border-base-300 hover:border-primary/50 hover:bg-base-50'
-                                    }`}
-                                    onDragEnter={handleDragEnter}
-                                    onDragLeave={handleDragLeave}
-                                    onDragOver={handleDragOver}
-                                    onDrop={handleDrop}
-                                >
-                                    {isDragOver ? (
-                                        <>
-                                            <svg className="w-16 h-16 text-primary mb-4 animate-bounce" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                                            </svg>
-                                            <div className="text-lg font-semibold text-primary mb-2">Release mouse to upload file</div>
-                                            <div className="text-sm text-base-content/70">Supports drag and drop or click to upload file</div>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <label htmlFor="file-upload" className="btn btn-primary mb-4 cursor-pointer">
-                                                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2" />
-                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M7 10l5 5 5-5" />
-                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 15V3" />
-                                                </svg>
-                                                Select file to upload
-                                            </label>
-                                            <input
-                                                id="file-upload"
-                                                type="file"
-                                                className="file-input file-input-bordered w-full max-w-xs mb-4"
-                                                onChange={e => {
-                                                    const file = e.target.files?.[0];
-                                                    if (file) {
-                                                        handleFileDropped(file, { x: 0, y: 0 });
-                                                    }
-                                                }}
-                                            />
-                                            <div className="text-center">
-                                                <div className="text-base-content/70 mb-1">Or drag and drop the file here</div>
-                                                <div className="text-xs text-base-content/50">Supports all file types</div>
-                                            </div>
-                                        </>
-                                    )}
-                                </div>
-                                
-                                {/* Upload Progress Display */}
-                                {(() => {
-                                    console.log('🖼️ Render check:', { isLoading, currentFileName, stagesCount: uploadStages.length, stages: uploadStages });
-                                    return null;
-                                })()}
-                                {(isLoading || currentFileName) && (
-                                    <div className="mt-6 p-6 bg-gradient-to-br from-base-200 to-base-100 rounded-2xl shadow-lg border border-base-300">
-                                        <div className="flex items-center gap-3 mb-6">
-                                            <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center animate-pulse">
-                                                <svg className="w-6 h-6 text-primary" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                                </svg>
-                                            </div>
-                                            <div className="flex-1">
-                                                <h3 className="font-semibold text-lg">Processing Knowledge Item</h3>
-                                                <p className="text-sm text-base-content/60 truncate">{currentFileName}</p>
-                                            </div>
-                                        </div>
-                                        
-                                        <div className="space-y-3">
-                                            {uploadStages.map((stage) => (
-                                                <div 
-                                                    key={stage.name}
-                                                    className={`flex items-center gap-4 p-3 rounded-lg transition-all duration-300 ${
-                                                        stage.status === 'processing' ? 'bg-primary/10 shadow-sm scale-[1.02]' :
-                                                        stage.status === 'completed' ? 'bg-success/10' :
-                                                        stage.status === 'failed' ? 'bg-error/10' :
-                                                        'bg-base-100/50'
-                                                    }`}
-                                                >
-                                                    <div className="text-2xl">{stage.icon}</div>
-                                                    <div className="flex-1">
+                    {/* Chat Section */}
+                    <div className="w-full lg:w-[400px] flex-shrink-0">
+                        <div className="rounded-lg p-3 bg-base-100 shadow h-[60vh] lg:h-[700px] flex flex-col">
+                            {/* Main Content Area */}
+                            <div className="relative w-full h-full flex flex-col">
+                                {/* Messages Container */}
+                                <div ref={messagesContainerRef} className="flex-1 overflow-y-auto mb-4 px-2">
+                                    {messages.map((msg, index) => {
+                                        if (msg.role === 'system' && msg.content === 'guide') {
+                                            return (
+                                                <div key={index} className="mb-4 p-4 bg-base-200/50 rounded-xl text-sm text-base-content/70">
+                                                    <h3 className="font-bold text-base mb-3">💡 Usage Guide</h3>
+                                                    {/* Legend for node styles */}
+                                                    <div className="grid grid-cols-2 gap-x-4 gap-y-2 items-start mb-3">
                                                         <div className="flex items-center gap-2">
-                                                            <span className={`font-medium text-sm ${
-                                                                stage.status === 'processing' ? 'text-primary' :
-                                                                stage.status === 'completed' ? 'text-success' :
-                                                                stage.status === 'failed' ? 'text-error' :
-                                                                'text-base-content/40'
-                                                            }`}>
-                                                                {stage.message}
-                                                            </span>
+                                                            <span aria-hidden className="inline-block w-4 h-4 rounded-full" style={{ backgroundColor: '#ef7234' }}></span>
+                                                            <span className="text-base-content/80">category</span>
+                                                        </div>
+                                                        <div className="flex items-center gap-2">
+                                                            <span aria-hidden className="inline-block w-4 h-4 rounded-full" style={{ backgroundColor: '#76b7b2' }}></span>
+                                                            <span className="text-base-content/80">keyword / topic</span>
+                                                        </div>
+                                                        <div className="flex items-center gap-2">
+                                                            <span aria-hidden className="inline-block w-4 h-4 rounded-full" style={{ backgroundColor: '#3c3c43' }}></span>
+                                                            <span className="text-base-content/80">file</span>
+                                                        </div>
+                                                        <div className="flex items-center gap-2">
+                                                            <span aria-hidden className="inline-block w-4 h-4 rounded-full" style={{ backgroundColor: '#1f77b4' }}></span>
+                                                            <span className="text-base-content/80">url</span>
                                                         </div>
                                                     </div>
-                                                    <div>
-                                                        {stage.status === 'processing' && (
-                                                            <span className="loading loading-spinner loading-sm text-primary"></span>
-                                                        )}
-                                                        {stage.status === 'completed' && (
-                                                            <svg className="w-5 h-5 text-success" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                                                                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                                                            </svg>
-                                                        )}
-                                                        {stage.status === 'failed' && (
-                                                            <svg className="w-5 h-5 text-error" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                                                                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                                                            </svg>
-                                                        )}
-                                                        {stage.status === 'pending' && (
-                                                            <div className="w-5 h-5 rounded-full border-2 border-base-300"></div>
-                                                        )}
+                                                    <div className="space-y-1 text-xs">
+                                                        <div>1. Ask something about document.</div>
+                                                        <div>2. Double-click to show the details.</div>
+                                                        <div>3. Drag and drop files into the graph to build.</div>
+                                                        <div>4. Click <span className="inline-flex items-center mx-1 px-1.5 py-0.5 text-xs font-medium bg-primary-content text-primary rounded-full">1</span> to focus the reference.</div>
                                                     </div>
                                                 </div>
-                                            ))}
+                                            );
+                                        }
+                                        
+                                        if (msg.role === 'user') {
+                                            return (
+                                                <div key={index} className="chat chat-end mb-4">
+                                                    <div className="chat-bubble">{msg.content}</div>
+                                                </div>
+                                            );
+                                        }
+                                        
+                                        if (msg.role === 'assistant') {
+                                            // If this assistant message is one of the upload progress messages, render a timeline
+                                            if (uploadTimelineMessageIndicesRef.current.has(index)) {
+                                                const titleMap: Record<UploadStage['name'], string> = {
+                                                    TEXT_EXTRACTION: '文本抽取',
+                                                    HOT_WORD_GENERATION: '关键词生成',
+                                                    EMBEDDING_GENERATION: '向量嵌入',
+                                                    HOT_WORD_ASSOCIATION_GENERATION: '关联构建',
+                                                };
+                                                return (
+                                                    <div key={index} className="mb-4 p-3 rounded-xl bg-base-200/40">
+                                                        <div className="mb-2 text-xs opacity-70 truncate" title={currentFileName}>{currentFileName ? `上传 ${currentFileName} 文件` : '处理中…'}</div>
+                                                        <ul className="timeline timeline-vertical timeline-compact">
+                                                            {uploadStages.map((stage, i) => {
+                                                                const isCompleted = stage.status === 'completed';
+                                                                const isProcessing = stage.status === 'processing';
+                                                                const isFailed = stage.status === 'failed';
+                                                                const prev = i > 0 ? uploadStages[i - 1] : undefined;
+                                                                const prevFailed = prev?.status === 'failed';
+                                                                const prevDone = prev && (prev.status === 'completed' || prev.status === 'processing') && !prevFailed;
+                                                                const topHrClass = i > 0 ? (prevFailed ? 'bg-error' : prevDone ? 'bg-primary' : '') : '';
+                                                                const bottomHrClass = isFailed ? 'bg-error' : (isCompleted || isProcessing) ? 'bg-primary' : '';
+                                                                const iconClass = `${isFailed ? 'text-error' : (isCompleted || isProcessing) ? 'text-primary' : 'text-base-300'} h-4 w-4`;
+                                                                return (
+                                                                    <li key={stage.name}>
+                                                                        {i > 0 && <hr className={topHrClass} />}
+                                                                        <div className="timeline-middle">
+                                                                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className={iconClass}>
+                                                                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clipRule="evenodd" />
+                                                                            </svg>
+                                                                        </div>
+                                                                        <div className="timeline-end timeline-box max-w-full">
+                                                                            <div className="text-sm font-medium truncate">{titleMap[stage.name]}</div>
+                                                                            {stage.message && <div className="text-xs opacity-70 mt-0.5 truncate">{stage.message}</div>}
+                                                                        </div>
+                                                                        {i < uploadStages.length - 1 && <hr className={bottomHrClass} />}
+                                                                    </li>
+                                                                );
+                                                            })}
+                                                        </ul>
+                                                    </div>
+                                                );
+                                            }
+                                            return (
+                                                <div key={index} className="mb-4 p-4 rounded-xl">
+                                                    <Markdown content={msg.content} onTagClick={handleTagClick} />
+                                                </div>
+                                            );
+                                        }
+                                        
+                                        return null;
+                                    })}
+
+                                    {/* Current streaming response */}
+                                    {currentResponse && (
+                                        <div className="mb-4 p-4 rounded-xl">
+                                            <Markdown content={currentResponse} onTagClick={handleTagClick} />
                                         </div>
-                                    </div>
-                                )}
-                                
-                                {response && !isLoading && (
-                                    <div className={`mt-4 p-4 rounded-xl ${
-                                        response.includes('✅') ? 'bg-success/10 border border-success/20' : 
-                                        response.includes('❌') ? 'bg-error/10 border border-error/20' : 
-                                        'bg-base-200'
-                                    }`}>
-                                        <div className="whitespace-pre-wrap">{response}</div>
-                                    </div>
-                                )}
-                            </>
-                        ) : activeTab === 'Chat' ? (
-                            <div className="relative w-full">
-                                <div className="relative">
+                                    )}
+                                </div>
+
+                                {/* Input area at bottom */}
+                                <div className="mt-auto">
                                     <textarea
                                         ref={chatTextareaRef}
                                         value={chatMessage}
                                         onChange={(e) => setChatMessage(e.target.value)}
                                         onKeyDown={handleChatKeyDown}
                                         placeholder="Enter your chat message..."
-                                        rows={4}
-                                        className="textarea w-full px-6 py-5 rounded-xl shadow-inner pr-32"
+                                        rows={2}
+                                        className="textarea w-full px-6 py-4 rounded-xl shadow-inner pr-14 resize-none"
                                         maxLength={1000}
                                         aria-label="Chat message input"
                                     />
                                     <button
-                                        onClick={() => handleUploadKnowledge(false)}
+                                        onClick={() => handleSendChat()}
                                         disabled={!chatMessage.trim() || isLoading}
-                                        className="btn btn-soft btn-primary btn-circle absolute bottom-4 right-4 z-10 flex items-center justify-center disabled:cursor-not-allowed"
-                                        style={{ width: '42px', height: '42px', minWidth: '42px', minHeight: '42px' }}
+                                        className="btn btn-soft btn-primary btn-circle absolute bottom-3 right-3 z-10 flex items-center justify-center disabled:cursor-not-allowed"
+                                        style={{ width: '38px', height: '38px', minWidth: '38px', minHeight: '38px' }}
                                         aria-label="发送"
                                     >
-                                        <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                                             <path d="M3 10h12" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" />
                                             <path d="M10 6l6 4-6 4" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
                                         </svg>
                                     </button>
                                 </div>
-                                <div className="flex justify-between mt-1">
-                                    <div className="text-xs text-base-content/30">{chatMessage.length}/1000</div>
-                                    <span className="text-xs text-base-content/40">Enter to send</span>
-                                </div>
-                                {response && (
-                                    <div className="mt-4 p-4 bg-base-200 rounded-xl max-w-4xl">
-                                        <Markdown content={response} onTagClick={handleTagClick}/>
-                                    </div>
-                                )}
                             </div>
-                        ) : activeTab === 'Link' ? (
-                            <div className="space-y-4">
-                                <div className="relative">
-                                    <input
-                                        type="url"
-                                        value={linkUrl}
-                                        onChange={(e) => setLinkUrl(e.target.value)}
-                                        placeholder="https://example.com"
-                                        className="input w-full px-6 py-5 rounded-xl shadow-inner text-lg"
-                                    />
-                                    <div className="absolute right-4 top-1/2 transform -translate-y-1/2">
-                                        <svg className="w-5 h-5 text-base-content/30" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-                                        </svg>
-                                    </div>
-                                </div>
-                                <div className="text-sm text-base-content/70 px-2">
-                                    Supports web links, video links, document links, and various URLs.
-                                </div>
-                                
-                                {/* Upload Progress Display for Link */}
-                                {(isLoading || currentFileName) && (
-                                    <div className="mt-6 p-6 bg-gradient-to-br from-base-200 to-base-100 rounded-2xl shadow-lg border border-base-300">
-                                        <div className="flex items-center gap-3 mb-4">
-                                            <div className="w-3 h-3 bg-primary rounded-full animate-pulse"></div>
-                                            <h3 className="text-lg font-semibold text-base-content">
-                                                Processing URL Content
-                                            </h3>
-                                        </div>
-                                        
-                                        <div className="space-y-4">
-                                            {uploadStages.map((stage) => (
-                                                <div key={stage.name} className="flex items-center gap-4 p-3 rounded-xl bg-base-100/50">
-                                                    <div className="flex-shrink-0">
-                                                        {stage.status === 'completed' ? (
-                                                            <div className="w-8 h-8 bg-success text-success-content rounded-full flex items-center justify-center text-sm font-bold">
-                                                                ✓
-                                                            </div>
-                                                        ) : stage.status === 'processing' ? (
-                                                            <div className="w-8 h-8 bg-primary text-primary-content rounded-full flex items-center justify-center">
-                                                                <span className="loading loading-spinner loading-xs"></span>
-                                                            </div>
-                                                        ) : stage.status === 'failed' ? (
-                                                            <div className="w-8 h-8 bg-error text-error-content rounded-full flex items-center justify-center text-sm font-bold">
-                                                                ✗
-                                                            </div>
-                                                        ) : (
-                                                            <div className="w-8 h-8 bg-base-300 text-base-content/40 rounded-full flex items-center justify-center text-lg">
-                                                                {stage.icon}
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                    <div className="flex-1">
-                                                        <div className="font-medium text-base-content">
-                                                            {stage.message}
-                                                        </div>
-                                                        {stage.status === 'processing' && (
-                                                            <div className="mt-2">
-                                                                <div className="w-full bg-base-300 rounded-full h-2">
-                                                                    <div className="bg-primary h-2 rounded-full animate-pulse" style={{width: '60%'}}></div>
-                                                                </div>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-                                
-                                {response && !isLoading && (
-                                    <div className={`mt-4 p-4 rounded-xl ${
-                                        response.includes('✅') ? 'bg-success/10 border border-success/20' : 
-                                        response.includes('❌') ? 'bg-error/10 border border-error/20' : 
-                                        'bg-base-200'
-                                    }`}>
-                                        <h4 className="font-semibold mb-2">Parsing result:</h4>
-                                        <Markdown content={response} onTagClick={handleTagClick}/>
-                                    </div>
-                                )}
-                            </div>
-                        ) : activeTab === 'Long Text' ? (
-                            <div className="relative">
-                                <textarea
-                                    value={longText}
-                                    onChange={(e) => setLongText(e.target.value)}
-                                    placeholder="Paste your long text content here..."
-                                    rows={8}
-                                    className="textarea w-full px-6 py-5 rounded-xl shadow-inner"
-                                />
-                                <div className="absolute bottom-4 right-4 text-xs text-base-content/30">
-                                    {longText.length} characters
-                                </div>
-                                <div className="mt-2 text-sm text-base-content/70 px-2">
-                                    Supports articles, papers, reports, and other long text content.
-                                </div>
-                                
-                                {/* Upload Progress Display for Long Text */}
-                                {(isLoading || currentFileName) && (
-                                    <div className="mt-6 p-6 bg-gradient-to-br from-base-200 to-base-100 rounded-2xl shadow-lg border border-base-300">
-                                        <div className="flex items-center gap-3 mb-4">
-                                            <div className="w-3 h-3 bg-primary rounded-full animate-pulse"></div>
-                                            <h3 className="text-lg font-semibold text-base-content">
-                                                Processing Text Content
-                                            </h3>
-                                        </div>
-                                        
-                                        <div className="space-y-4">
-                                            {uploadStages.map((stage) => (
-                                                <div key={stage.name} className="flex items-center gap-4 p-3 rounded-xl bg-base-100/50">
-                                                    <div className="flex-shrink-0">
-                                                        {stage.status === 'completed' ? (
-                                                            <div className="w-8 h-8 bg-success text-success-content rounded-full flex items-center justify-center text-sm font-bold">
-                                                                ✓
-                                                            </div>
-                                                        ) : stage.status === 'processing' ? (
-                                                            <div className="w-8 h-8 bg-primary text-primary-content rounded-full flex items-center justify-center">
-                                                                <span className="loading loading-spinner loading-xs"></span>
-                                                            </div>
-                                                        ) : stage.status === 'failed' ? (
-                                                            <div className="w-8 h-8 bg-error text-error-content rounded-full flex items-center justify-center text-sm font-bold">
-                                                                ✗
-                                                            </div>
-                                                        ) : (
-                                                            <div className="w-8 h-8 bg-base-300 text-base-content/40 rounded-full flex items-center justify-center text-lg">
-                                                                {stage.icon}
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                    <div className="flex-1">
-                                                        <div className="font-medium text-base-content">
-                                                            {stage.message}
-                                                        </div>
-                                                        {stage.status === 'processing' && (
-                                                            <div className="mt-2">
-                                                                <div className="w-full bg-base-300 rounded-full h-2">
-                                                                    <div className="bg-primary h-2 rounded-full animate-pulse" style={{width: '60%'}}></div>
-                                                                </div>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-                                
-                                {response && !isLoading && (
-                                    <div className={`mt-4 p-4 rounded-xl ${
-                                        response.includes('✅') ? 'bg-success/10 border border-success/20' : 
-                                        response.includes('❌') ? 'bg-error/10 border border-error/20' : 
-                                        'bg-base-200'
-                                    }`}>
-                                        <h4 className="font-semibold mb-2">Analysis result:</h4>
-                                        <Markdown content={response} onTagClick={handleTagClick} />
-                                    </div>
-                                )}
-                            </div>
-                        ) : null}
-                    </div>
-                </div>
-
-                {/* Controls */}
-                <div className="space-y-10">
-                    {/* Combined row: selects + Create button + external link */}
-                    <div className="flex flex-col min-w-4xl sm:flex-row sm:items-center sm:justify-between gap-4">
-                        <div className="flex flex-wrap gap-3 items-center">
-
-                        </div>
-                        {/* Inline actions: Create button + external link */}
-                        <div className="flex items-center gap-4">
-                            {activeTab === 'Upload File' ? null : (
-                                <>
-                                    {/* Create Button */}
-                                    {activeTab === 'Link' || activeTab === 'Long Text' ? (
-                                        <>
-                                            <button
-                                                onClick={() => handleUploadKnowledge(false)}
-                                                disabled={
-                                                    activeTab === 'Link' ? !linkUrl.trim() || isLoading : 
-                                                    activeTab === 'Long Text' ? !longText.trim() || isLoading : true
-                                                }
-                                                className="btn btn-lg font-bold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 disabled:cursor-not-allowed disabled:transform-none"
-                                            >
-                                                <span className="flex items-center gap-2 text-sm">
-                                                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                                                        <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clipRule="evenodd" />
-                                                    </svg>
-                                                    {activeTab === 'Link' ? 'Parse Link' : 'Analyze Text'}
-                                                </span>
-                                            </button>
-                                            <button
-                                                onClick={() => handleUploadKnowledge(true)}
-                                                disabled={
-                                                    activeTab === 'Link' ? !linkUrl.trim() || isLoading : 
-                                                    activeTab === 'Long Text' ? !longText.trim() || isLoading : true
-                                                }
-                                                className="btn btn-lg btn-primary font-bold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 disabled:cursor-not-allowed disabled:transform-none"
-                                            >
-                                                <span className="flex items-center gap-2 text-sm">
-                                                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                                                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
-                                                    </svg>
-                                                    Create Podcast
-                                                </span>
-                                            </button>
-                                        </>
-                                    ) : null}
-                                </>
-                            )}
                         </div>
                     </div>
                 </div>
-            </div>
+            </section>
             <section className="mt-10 text-center max-w-4xl">
                 <h2 className="text-lg font-semibold mb-8">Share your thoughts and ideas with the world.</h2>
                 {podcastsLoading ? (
@@ -975,15 +547,15 @@ function Home() {
                                 month: 'numeric',
                                 day: 'numeric'
                             });
-                            const duration = podcast.estimated_duration 
-                                ? `${Math.floor(podcast.estimated_duration / 60)}m` 
+                            const duration = podcast.estimated_duration
+                                ? `${Math.floor(podcast.estimated_duration / 60)}m`
                                 : 'N/A';
-                            
+
                             // Extract UUID from knowledge_item_id (remove path prefix if exists)
-                            const cleanId = podcast.knowledge_item_id.includes('/') 
+                            const cleanId = podcast.knowledge_item_id.includes('/')
                                 ? podcast.knowledge_item_id.split('/').pop() || podcast.knowledge_item_id
                                 : podcast.knowledge_item_id;
-                            
+
                             return (
                                 <AudioCard
                                     key={podcast.podcast_id}

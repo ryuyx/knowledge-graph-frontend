@@ -9,7 +9,7 @@ const getDefaultConfig = (): ToolbarConfig => ({
   levelFilter: 'all',
   minConnections: 0,
   nodeSize: 1,
-  textSize: 1,
+  textSize: 0.7,
   nodeOpacity: 1,
   textLevelDisplay: [1, 2, 3, 4],
   linkWidth: 1.5,
